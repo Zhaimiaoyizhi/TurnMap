@@ -1155,8 +1155,11 @@ test("floating navigator opens from launcher hover and uses the main jump route"
   assert.match(source, /prefers-color-scheme: dark/);
   assert.match(source, /FLOATING_NAVIGATOR_HOVER_DELAY_MS\s*=\s*400/);
   assert.match(source, /FLOATING_NAVIGATOR_CLOSE_DELAY_MS\s*=\s*200/);
+  assert.match(source, /FLOATING_NAVIGATOR_VIEW_SWITCH_GRACE_MS\s*=\s*250/);
   assert.match(source, /function scheduleFloatingNavigatorOpen/);
   assert.match(source, /function scheduleFloatingNavigatorClose/);
+  assert.match(source, /function holdFloatingNavigatorOpenAfterViewSwitch/);
+  assert.match(source, /floatingPanel\?\.matches\(":hover"\) \|\| launcherButton\?\.matches\(":hover"\)/);
   assert.match(source, /function canShowFloatingNavigator/);
   assert.match(source, /activeAdapter\?\.site\.id\s*===\s*"chatgpt"/);
   assert.match(source, /launcherMovedDuringPointer/);
@@ -1166,6 +1169,8 @@ test("floating navigator opens from launcher hover and uses the main jump route"
   assert.match(renderBody, /turnmap-floating-favorite/);
   assert.match(renderBody, /event\.stopPropagation\(\);\s*toggleFloatingFavorite\(turn, favorite\)/);
   assert.match(renderBody, /floatingNavigatorView === "favorites"/);
+  assert.match(renderBody, /holdFloatingNavigatorOpenAfterViewSwitch\(\);\s*renderFloatingNavigator\(\)/);
+  assert.doesNotMatch(renderBody, /positionFloatingNavigatorNearLauncher\(\)/);
   assert.doesNotMatch(renderBody, /getCurrentAdapter\(\)\?\.jumpToTurn/);
   assert.doesNotMatch(renderBody, /refreshLatestTurns|refreshCompleteTurns|harvestTurnsByScrolling/);
   assert.match(messageBody, /performJumpToTurn\(message as JumpToTurnMessage\)/);

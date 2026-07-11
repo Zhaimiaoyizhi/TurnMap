@@ -77,9 +77,11 @@ let floatingThemeSetting: FloatingThemeMode = "browser";
 let floatingNavigatorEnabled = false;
 let floatingNavigatorOpenTimer: number | null = null;
 let floatingNavigatorCloseTimer: number | null = null;
+let floatingNavigatorViewSwitchGraceUntil = 0;
 
 const FLOATING_NAVIGATOR_HOVER_DELAY_MS = 400;
 const FLOATING_NAVIGATOR_CLOSE_DELAY_MS = 200;
+const FLOATING_NAVIGATOR_VIEW_SWITCH_GRACE_MS = 250;
 
 type FloatingThemeMode = "browser" | "day" | "night" | "eye-care";
 
@@ -225,6 +227,7 @@ function launcherPositionKey(): string {
 function removeFloatingPanel(): void {
   cancelFloatingNavigatorOpen();
   cancelFloatingNavigatorClose();
+  floatingNavigatorViewSwitchGraceUntil = 0;
   floatingPanel?.remove();
   floatingPanel = null;
 }
@@ -273,6 +276,11 @@ function cancelFloatingNavigatorClose(): void {
   floatingNavigatorCloseTimer = null;
 }
 
+function holdFloatingNavigatorOpenAfterViewSwitch(): void {
+  floatingNavigatorViewSwitchGraceUntil = Date.now() + FLOATING_NAVIGATOR_VIEW_SWITCH_GRACE_MS;
+  cancelFloatingNavigatorClose();
+}
+
 function scheduleFloatingNavigatorOpen(): void {
   if (!canShowFloatingNavigator()) return;
   cancelFloatingNavigatorClose();
@@ -288,10 +296,15 @@ function scheduleFloatingNavigatorOpen(): void {
 function scheduleFloatingNavigatorClose(): void {
   cancelFloatingNavigatorOpen();
   cancelFloatingNavigatorClose();
+  const delay = Math.max(
+    FLOATING_NAVIGATOR_CLOSE_DELAY_MS,
+    floatingNavigatorViewSwitchGraceUntil - Date.now()
+  );
   floatingNavigatorCloseTimer = window.setTimeout(() => {
     floatingNavigatorCloseTimer = null;
+    if (floatingPanel?.matches(":hover") || launcherButton?.matches(":hover")) return;
     removeFloatingPanel();
-  }, FLOATING_NAVIGATOR_CLOSE_DELAY_MS);
+  }, delay);
 }
 
 function positionFloatingNavigatorNearLauncher(): void {
@@ -409,8 +422,8 @@ function renderFloatingNavigator(): void {
       event.stopPropagation();
       if (floatingNavigatorView === view) return;
       floatingNavigatorView = view;
+      holdFloatingNavigatorOpenAfterViewSwitch();
       renderFloatingNavigator();
-      positionFloatingNavigatorNearLauncher();
     });
     tabs.append(tab);
   });
