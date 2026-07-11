@@ -36,6 +36,28 @@ It currently maps the active conversation on supported AI websites. Cross-conver
 - **Export and restore**: export TurnMap JSON, Obsidian Canvas, OPML, Obsidian vault Markdown, Markdown, SVG, and PNG. Use TurnMap JSON for the most complete editable backup.
 - **Local-first storage**: keep graph state, UI preferences, and generated language packs in the local browser profile.
 
+## Supported Site Capabilities
+
+ChatGPT is TurnMap's verified native reference route. The other built-in adapters now use the same identity-first safety rules, but remain labeled DOM fallback until long-conversation browser evidence proves a site-native full index and off-screen remount route. An ordinary DOM extraction success is not enough to claim native support.
+
+| Site | Extraction tier | Jump tier | Assistant text | Known limitation |
+| --- | --- | --- | --- | --- |
+| ChatGPT | Verified native user index | Verified native direct jump + bounded shell revive | Best effort | The page may not expose every assistant answer cheaply. |
+| DeepSeek | Identity-first mounted DOM fallback | Exact mounted-identity jump | Best effort | Unmounted turns fail safely; no scroll/text search. |
+| Kimi | Identity-first mounted DOM fallback | Exact mounted-identity jump | Best effort | Unmounted turns fail safely; no scroll/text search. |
+| Doubao | Identity-first mounted DOM fallback | Exact mounted-identity jump | Best effort | Unmounted turns fail safely; no scroll/text search. |
+| Qwen | Identity-first mounted DOM fallback | Exact mounted-identity jump | Best effort | Unmounted turns fail safely; no scroll/text search. |
+| Gemini | Identity-first mounted DOM fallback | Exact mounted-identity jump | Best effort | Unmounted turns fail safely; no scroll/text search. |
+| Google AI Studio | Identity-first mounted DOM fallback | Exact mounted-identity jump | Best effort | Unmounted turns fail safely; no scroll/text search. |
+| Claude | Identity-first mounted DOM fallback | Exact mounted-identity jump | Best effort | Unmounted turns fail safely; no scroll/text search. |
+| Perplexity | Identity-first mounted DOM fallback | Exact mounted-identity jump | Best effort | Unmounted turns fail safely; no scroll/text search. |
+| Grok | Identity-first mounted DOM fallback | Exact mounted-identity jump | Best effort | Unmounted turns fail safely; no scroll/text search. |
+| GLM / Z.ai | Identity-first mounted DOM fallback | Exact mounted-identity jump | Best effort | Unmounted turns fail safely; no scroll/text search. |
+| Mistral Le Chat | Identity-first mounted DOM fallback | Exact mounted-identity jump | Best effort | Unmounted turns fail safely; no scroll/text search. |
+| Arena / LMArena | Identity-first mounted DOM fallback | Exact mounted-identity jump | Best effort | Battle mode reads the selected answer side; unmounted turns fail safely. |
+
+TurnMap's ChatGPT route is a clean-room implementation. ophel is referenced for product behavior and architecture; TurnMap does not copy GPL-licensed code.
+
 ## Visual Tour
 
 ### Map Long Web AI Conversations
@@ -113,13 +135,13 @@ For preview builds, download the release zip from GitHub Releases, unzip it, and
 
 GitHub/unpacked installs require manual updates. Store distribution is the right path for automatic browser-managed updates.
 
-Latest preview package: `turnmap-v0.7.2.zip`. This maintenance release keeps the 0.7.x mini mind map and appearance customization focus, and adds safer reading/jumping controls, a separate Reading and Jumping settings section, more reliable content-script startup for the page launcher, safer map switching after Refresh or Deep Scan, default node-size controls, and tighter mini-map link routing. For long-term backup or transfer, export TurnMap JSON first because it preserves TurnMap-specific editing state more completely than visual formats.
+Latest local preview package: `turnmap-v0.8.3.zip`. This build keeps ChatGPT's verified native full-index route and migrates every other built-in adapter to identity-first mounted-DOM extraction and exact mounted-target jumping without legacy scroll/text-search fallback. For long-term backup or transfer, export TurnMap JSON first because it preserves TurnMap-specific editing state more completely than visual formats.
 
 ## Basic Usage
 
 1. Open a supported AI conversation.
 2. Open TurnMap.
-3. Click Refresh to read the full current conversation.
+3. Click Refresh to read the available conversation index. ChatGPT can use its verified native full index; other sites read currently mounted turns until their native routes are verified.
 4. Choose a layout: Single-side, Radial, Matrix, or Two-sided.
 5. Single-click a node to select it and use Node Actions.
 6. Right-click node body text to jump back to the source page.

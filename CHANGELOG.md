@@ -2,6 +2,29 @@
 
 All notable changes to TurnMap will be documented in this file.
 
+## [0.8.3] - Multi-Site Identity-First Navigation
+
+### Added
+
+- Added a shared capability contract for user indexing, target identity, direct jumping, shell revival, and assistant-text completeness.
+- Added site-scoped `ophel_notSourceAnchor` identities to DeepSeek, Kimi, Doubao, Qwen, Gemini, Google AI Studio, Claude, Perplexity, Grok, GLM / Z.ai, Mistral Le Chat, and Arena / LMArena.
+- Added an explicit 13-site capability table to the English and Chinese documentation.
+- Added multi-site floating navigation for every selected built-in adapter.
+
+### Changed
+
+- Migrated all non-ChatGPT built-in adapters away from the pre-0.8.0 long-distance scrolling extraction and SourceAnchor text-search jump route.
+- Changed Refresh, complete refresh, and the existing Deep Scan entry point on non-ChatGPT sites to the same non-scrolling mounted-DOM identity refresh.
+- Changed non-ChatGPT turn merging to use navigation identity, preserving repeated prompts that have different message identities.
+- Changed non-ChatGPT jumps to resolve exact mounted identities only; unmounted targets now fail explicitly instead of jumping to similar text or a neighboring turn.
+- Updated package and extension metadata to `0.8.3`.
+
+### Verification Boundary
+
+- ChatGPT remains the verified native full-index/direct-jump reference implementation with bounded shell revival.
+- The other twelve built-in sites are labeled identity-first DOM fallback until real-account long-conversation evidence supports promotion to full native capability.
+- The implementation is clean-room: ophel informs product behavior and architecture, but no GPL code is copied.
+
 ## [0.8.2] - ChatGPT Native Navigation And Prompt Workbench Preview
 
 ### Preview Scope

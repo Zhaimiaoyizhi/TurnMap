@@ -11,14 +11,24 @@
 
 export type TurnNavigation = {
   kind: "ophel_notSourceAnchor";
-  site: "chatgpt";
+  site: string;
   navigationId: string;
+  identitySource?: "native-message-id" | "mounted-dom-id";
   messageId?: string;
   turnId?: string;
   nativeTocIndex?: number;
   turnIndex?: number;
   textHash?: string;
   userPreview?: string;
+};
+
+export type NativeConversationCapabilities = {
+  userIndex: "verified-native" | "mounted-dom";
+  targetIdentity: "verified-native" | "mounted-dom";
+  directJump: "verified-native" | "mounted-only";
+  shellRevive: "bounded-native" | "unavailable";
+  assistantText: "best-effort";
+  limitations: string[];
 };
 
 export type Turn = {

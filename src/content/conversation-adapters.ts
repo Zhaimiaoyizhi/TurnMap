@@ -1,16 +1,12 @@
 ﻿import type { ExtractedTurnsMessage, JumpToTurnResult, SourceAnchor, Turn } from "../shared/types";
 import { adapterSites, chatGptSite, isChatGptUrl, selectAdapter, siteMatchesUrl, type ConversationSite } from "./adapter-registry";
 import type { JumpToTurnMessage } from "../shared/types";
+import type { NativeConversationCapabilities } from "../shared/types";
 import {
-  describeWebScrollElement,
   extractTurnsFromDocument,
   getLastWebExtractionDiagnostics,
   getWebConversationId,
   getWebConversationTitle,
-  harvestWebTurnsByScrolling,
-  mergeWebTurns,
-  normalizeWebTurnIndexes,
-  scrollToWebTurn,
   type WebConversationProfile
 } from "./web-adapter-core";
 import {
@@ -22,12 +18,20 @@ import {
   toTurnsMessage
 } from "./chatgpt-observer";
 import { jumpToTurn } from "./jump-controller";
+import {
+  attachNativeWebNavigation,
+  CHATGPT_NATIVE_CAPABILITIES,
+  mergeNativeWebTurns,
+  NATIVE_WEB_DOM_CAPABILITIES,
+  resolveNativeWebTarget
+} from "./native-web-navigation";
 
 export type TurnsListener = (turns: Turn[]) => void;
 type HarvestMeta = NonNullable<ExtractedTurnsMessage["harvestMeta"]>;
 
 export type ConversationAdapter = {
   site: ConversationSite;
+  capabilities: NativeConversationCapabilities;
   detectSite(url: URL): boolean;
   getLatestTurns(): Turn[];
   refreshLatestTurns(): Promise<Turn[]>;
@@ -42,6 +46,7 @@ export const chatGptAdapter: ConversationAdapter = {
   site: {
     ...chatGptSite
   },
+  capabilities: CHATGPT_NATIVE_CAPABILITIES,
   detectSite: isChatGptUrl,
   getLatestTurns,
   refreshLatestTurns,
@@ -1720,34 +1725,33 @@ const webProfiles: WebConversationProfile[] = [
 
 function createWebAdapter(profile: WebConversationProfile): ConversationAdapter {
   let latestTurns: Turn[] = [];
+  let latestConversationId = "";
   let observer: MutationObserver | null = null;
   let debounceTimer: number | null = null;
   let lastHarvestMeta: HarvestMeta | undefined;
 
+  const resetCacheForConversation = () => {
+    const conversationId = getWebConversationId(profile);
+    if (conversationId !== latestConversationId) {
+      latestConversationId = conversationId;
+      latestTurns = [];
+      lastHarvestMeta = undefined;
+    }
+  };
+
+  const readMountedTurns = () =>
+    attachNativeWebNavigation(extractTurnsFromDocument(profile), profile.site.id);
+
   const refresh = async () => {
-    latestTurns = mergeWebTurns(latestTurns, extractTurnsFromDocument(profile));
+    resetCacheForConversation();
+    latestTurns = mergeNativeWebTurns(latestTurns, readMountedTurns());
     lastHarvestMeta = {
       attempted: false,
-      source: "dom",
+      source: "native-navigation",
       scrollContainer: "document",
       scrollHeight: document.documentElement.scrollHeight,
       clientHeight: document.documentElement.clientHeight,
       scannedSteps: 0,
-      diagnostics: getLastWebExtractionDiagnostics(profile)
-    };
-    return latestTurns;
-  };
-
-  const harvest = async () => {
-    const result = await harvestWebTurnsByScrolling(profile);
-    latestTurns = normalizeWebTurnIndexes(result.turns.length > 0 ? result.turns : latestTurns);
-    lastHarvestMeta = {
-      attempted: true,
-      source: "deep-scan",
-      scrollContainer: describeWebScrollElement(result.scrollElement),
-      scrollHeight: result.scrollElement.scrollHeight,
-      clientHeight: result.scrollElement.clientHeight,
-      scannedSteps: result.scannedSteps,
       diagnostics: getLastWebExtractionDiagnostics(profile)
     };
     return latestTurns;
@@ -1765,21 +1769,23 @@ function createWebAdapter(profile: WebConversationProfile): ConversationAdapter 
 
   return {
     site: profile.site,
+    capabilities: NATIVE_WEB_DOM_CAPABILITIES,
     detectSite(url) {
       return siteMatchesUrl(profile.site, url);
     },
     getLatestTurns() {
-      if (latestTurns.length === 0) latestTurns = mergeWebTurns([], extractTurnsFromDocument(profile));
+      resetCacheForConversation();
+      if (latestTurns.length === 0) latestTurns = mergeNativeWebTurns([], readMountedTurns());
       return latestTurns;
     },
     refreshLatestTurns: refresh,
-    refreshCompleteTurns: harvest,
-    harvestTurnsByScrolling: harvest,
+    refreshCompleteTurns: refresh,
+    harvestTurnsByScrolling: refresh,
     async jumpToTurn(target) {
-      if (!target.anchor) {
-        return { ok: false, reason: "This web turn has no legacy source anchor for jumping." };
+      if (!target.navigation) {
+        return { ok: false, reason: `This ${profile.site.displayName} turn has no native navigation identity.` };
       }
-      return scrollToWebTurn(target.anchor, latestTurns, profile);
+      return resolveNativeWebTarget(target.navigation, profile);
     },
     startObserver(listener) {
       if (observer) return;
@@ -1801,7 +1807,7 @@ function createWebAdapter(profile: WebConversationProfile): ConversationAdapter 
         harvestMeta: {
           ...(lastHarvestMeta ?? {
             attempted: false,
-            source: "dom",
+            source: "native-navigation",
             scrollContainer: "document",
             scrollHeight: document.documentElement.scrollHeight,
             clientHeight: document.documentElement.clientHeight,

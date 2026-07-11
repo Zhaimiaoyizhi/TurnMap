@@ -227,6 +227,35 @@ test("launcher uses the packaged TurnMap plugin icon", () => {
   assert.doesNotMatch(source, /launcherButton\.innerHTML\s*=/);
 });
 
+test("all built-in adapters declare identity-first navigation capabilities", () => {
+  const source = readFileSync(new URL("../src/content/conversation-adapters.ts", import.meta.url), "utf8");
+
+  assert.match(source, /capabilities:\s*CHATGPT_NATIVE_CAPABILITIES/);
+  assert.match(source, /capabilities:\s*NATIVE_WEB_DOM_CAPABILITIES/);
+});
+
+test("non-ChatGPT adapters do not call legacy scrolling extraction or source-anchor jump search", () => {
+  const source = readFileSync(new URL("../src/content/conversation-adapters.ts", import.meta.url), "utf8");
+  const webAdapterStart = source.indexOf("function createWebAdapter");
+  const webAdapterBody = source.slice(webAdapterStart);
+
+  assert.ok(webAdapterStart >= 0);
+  assert.doesNotMatch(webAdapterBody, /harvestWebTurnsByScrolling/);
+  assert.doesNotMatch(webAdapterBody, /scrollToWebTurn/);
+  assert.match(webAdapterBody, /resolveNativeWebTarget/);
+  assert.match(webAdapterBody, /refreshCompleteTurns:\s*refresh/);
+  assert.match(webAdapterBody, /harvestTurnsByScrolling:\s*refresh/);
+});
+
+test("floating navigator is available to every selected built-in adapter", () => {
+  const source = readFileSync(new URL("../src/content/index.ts", import.meta.url), "utf8");
+  const start = source.indexOf("function canShowFloatingNavigator");
+  const body = source.slice(start, start + 260);
+
+  assert.match(body, /Boolean\(activeAdapter\)/);
+  assert.doesNotMatch(body, /site\.id\s*===\s*["']chatgpt["']/);
+});
+
 test("floating launcher avoids browser-native title tooltips over custom panels", () => {
   const source = readFileSync(new URL("../src/content/index.ts", import.meta.url), "utf8");
 
@@ -1161,7 +1190,7 @@ test("floating navigator opens from launcher hover and uses the main jump route"
   assert.match(source, /function holdFloatingNavigatorOpenAfterViewSwitch/);
   assert.match(source, /floatingPanel\?\.matches\(":hover"\) \|\| launcherButton\?\.matches\(":hover"\)/);
   assert.match(source, /function canShowFloatingNavigator/);
-  assert.match(source, /activeAdapter\?\.site\.id\s*===\s*"chatgpt"/);
+  assert.match(source, /Boolean\(activeAdapter\)/);
   assert.match(source, /launcherMovedDuringPointer/);
 
   assert.match(renderBody, /addEventListener\("click", \(event\) => \{/);

@@ -540,7 +540,7 @@ test("prompt workbench is wired into content and settings surfaces with i18n", (
   assert.match(i18nSource, /promptWorkbench\.title/);
   assert.match(i18nSource, /promptWorkbench\.action\.optimize/);
   assert.match(i18nSource, /promptWorkbench\.aria\.launcher/);
-  assert.match(packageSource, /"version": "0\.8\.2"/);
+  assert.match(packageSource, /"version": "0\.8\.3"/);
 });
 
 test("prompt workbench keeps the content script self-contained for classic Chrome injection", () => {

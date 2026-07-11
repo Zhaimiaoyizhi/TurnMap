@@ -604,7 +604,8 @@ function candidateFromElement(
 function elementId(element: HTMLElement, role: ConversationBlock["role"], index: number): string {
   return (
     element.getAttribute("data-message-id") ||
-    element.getAttribute("data-testid") ||
+    element.getAttribute("data-turn-id") ||
+    element.getAttribute("data-id") ||
     element.getAttribute("id") ||
     `${role}-${index}-${hashText(normalizeWebText(element.textContent ?? ""))}`
   );
@@ -1016,7 +1017,7 @@ function resolveRevealScrollElement(element: HTMLElement, scrollElement?: HTMLEl
   return getNearestScrollableAncestor(element) ?? fallback;
 }
 
-function revealWebTurnElement(element: HTMLElement, scrollElement?: HTMLElement): void {
+export function revealWebTurnElement(element: HTMLElement, scrollElement?: HTMLElement): void {
   ensureWebHighlightStyle();
   scrollElementToCenter(element, resolveRevealScrollElement(element, scrollElement));
   element.classList.add(WEB_HIGHLIGHT_CLASS);

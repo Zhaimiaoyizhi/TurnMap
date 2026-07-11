@@ -261,7 +261,7 @@ function loadFloatingTheme(): void {
 }
 
 function canShowFloatingNavigator(): boolean {
-  return Boolean(floatingNavigatorEnabled && activeAdapter?.site.id === "chatgpt" && launcherButton && !launcherMovedDuringPointer);
+  return Boolean(floatingNavigatorEnabled && Boolean(activeAdapter) && launcherButton && !launcherMovedDuringPointer);
 }
 
 function cancelFloatingNavigatorOpen(): void {
