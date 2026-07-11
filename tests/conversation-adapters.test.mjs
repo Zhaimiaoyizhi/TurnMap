@@ -1163,6 +1163,9 @@ test("floating navigator opens from launcher hover and uses the main jump route"
 
   assert.match(renderBody, /addEventListener\("click", \(event\) => \{/);
   assert.match(renderBody, /performJumpToTurn\(\{ type: "TURNMAP_JUMP_TO_TURN", navigation: turn\.navigation, anchor: turn\.sourceAnchor \}\)/);
+  assert.match(renderBody, /turnmap-floating-favorite/);
+  assert.match(renderBody, /event\.stopPropagation\(\);\s*toggleFloatingFavorite\(turn, favorite\)/);
+  assert.match(renderBody, /floatingNavigatorView === "favorites"/);
   assert.doesNotMatch(renderBody, /getCurrentAdapter\(\)\?\.jumpToTurn/);
   assert.doesNotMatch(renderBody, /refreshLatestTurns|refreshCompleteTurns|harvestTurnsByScrolling/);
   assert.match(messageBody, /performJumpToTurn\(message as JumpToTurnMessage\)/);
@@ -1187,8 +1190,21 @@ test("floating navigator merges partial observer updates instead of replacing th
   const broadcastBody = source.slice(broadcastStart, broadcastEnd);
 
   assert.match(source, /mergeTurns/);
-  assert.match(broadcastBody, /floatingTurns\s*=\s*mergeFloatingTurns\(floatingTurns,\s*message\.turns\)/);
+  assert.match(broadcastBody, /const conversationChanged = message\.conversationId\.trim\(\) !== floatingConversationId/);
+  assert.match(broadcastBody, /message\.turns\s*:\s*mergeFloatingTurns\(floatingTurns,\s*message\.turns\)/);
   assert.doesNotMatch(broadcastBody, /floatingTurns\s*=\s*message\.turns/);
+  assert.match(broadcastBody, /setFloatingConversationId\(message\.conversationId\)/);
+});
+
+test("ChatGPT observer clears its turn cache when the single-page conversation id changes", () => {
+  const source = readFileSync(new URL("../src/content/chatgpt-observer.ts", import.meta.url), "utf8");
+
+  assert.match(source, /let latestTurnsConversationId = ""/);
+  assert.match(source, /function resetLatestTurnsForConversation\(\)/);
+  assert.match(source, /latestTurns = \[\];/);
+  assert.match(source, /lastHarvestMeta = undefined;/);
+  assert.match(source, /if \(conversationId !== getConversationId\(\)\) return;/);
+  assert.match(source, /if \(conversationId !== getConversationId\(\)\) return refreshLatestTurns\(\);/);
 });
 
 test("graph node jumps prefer ophel_notSourceAnchor navigation over SourceAnchor", () => {

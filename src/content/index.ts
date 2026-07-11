@@ -3,6 +3,23 @@ import { selectConversationAdapter, type ConversationAdapter } from "./conversat
 import { getTurnMapLauncherIconUrl, loadTurnMapLauncherIconSrc } from "./launcher-icon";
 import { startPromptWorkbench } from "./prompt-workbench";
 import { mergeTurns } from "./turn-extractor";
+import {
+  isTurnFavorited,
+  loadFloatingFavorites,
+  resolveFloatingFavorites,
+  saveFloatingFavorites,
+  toggleTurnFavorite,
+  type FloatingFavorite
+} from "./floating-favorites";
+import {
+  CUSTOM_LANGUAGES_STORAGE_KEY,
+  LANGUAGE_STORAGE_KEY,
+  formatTranslation,
+  loadLanguageSettings,
+  translationsFor,
+  type I18nKey,
+  type TranslationMap
+} from "../side-panel/i18n/i18n-storage";
 
 declare global {
   interface Window {
@@ -24,7 +41,9 @@ function isContentMessage(message: unknown): message is JumpToTurnMessage | { ty
 }
 
 function broadcastTurns(message: ExtractedTurnsMessage): void {
-  floatingTurns = mergeFloatingTurns(floatingTurns, message.turns);
+  const conversationChanged = message.conversationId.trim() !== floatingConversationId;
+  floatingTurns = conversationChanged ? message.turns : mergeFloatingTurns(floatingTurns, message.turns);
+  setFloatingConversationId(message.conversationId);
   renderFloatingNavigator();
   chrome.runtime.sendMessage(message).catch(() => {
     // Side panel may be closed. The next explicit request will fetch current turns.
@@ -69,6 +88,124 @@ type FloatingPosition = {
   top: number;
 };
 
+type FloatingNavigatorView = "all" | "favorites";
+type FloatingNavigatorEntry = {
+  turn: Turn;
+  favorite?: FloatingFavorite;
+  unavailable: boolean;
+};
+
+const FLOATING_NAVIGATOR_I18N_KEYS = {
+  all: "floatingNavigator.view.all",
+  favorites: "floatingNavigator.view.favorites",
+  addFavorite: "floatingNavigator.action.addFavorite",
+  removeFavorite: "floatingNavigator.action.removeFavorite",
+  jump: "floatingNavigator.action.jump",
+  emptyAll: "floatingNavigator.empty.all",
+  emptyFavorites: "floatingNavigator.empty.favorites",
+  unavailable: "floatingNavigator.unavailable",
+  turn: "floatingNavigator.turn"
+} satisfies Record<string, I18nKey>;
+
+type FloatingNavigatorLabel = keyof typeof FLOATING_NAVIGATOR_I18N_KEYS;
+
+let floatingNavigatorView: FloatingNavigatorView = "all";
+let floatingConversationId = "";
+let floatingFavorites: FloatingFavorite[] = [];
+let floatingFavoritesLoadVersion = 0;
+let floatingFavoritesSaveQueue: Promise<void> = Promise.resolve();
+let floatingNavigatorTranslations: TranslationMap = translationsFor("en", []);
+
+function floatingLabel(key: FloatingNavigatorLabel, values?: Record<string, string | number>): string {
+  const i18nKey = FLOATING_NAVIGATOR_I18N_KEYS[key];
+  return formatTranslation(floatingNavigatorTranslations[i18nKey] ?? translationsFor("en", [])[i18nKey], values);
+}
+
+function refreshFloatingNavigatorTranslations(): void {
+  void loadLanguageSettings().then((settings) => {
+    floatingNavigatorTranslations = translationsFor(settings.mode, settings.customLanguages);
+    renderFloatingNavigator();
+  });
+}
+
+function setFloatingConversationId(conversationId: string): void {
+  const nextConversationId = conversationId.trim();
+  if (nextConversationId === floatingConversationId) return;
+  floatingConversationId = nextConversationId;
+  floatingNavigatorView = "all";
+  floatingFavorites = [];
+  const loadVersion = ++floatingFavoritesLoadVersion;
+  if (!nextConversationId) {
+    renderFloatingNavigator();
+    return;
+  }
+  void loadFloatingFavorites(nextConversationId)
+    .then((favorites) => {
+      if (loadVersion !== floatingFavoritesLoadVersion || floatingConversationId !== nextConversationId) return;
+      floatingFavorites = favorites;
+      renderFloatingNavigator();
+    })
+    .catch(() => {
+      if (loadVersion !== floatingFavoritesLoadVersion || floatingConversationId !== nextConversationId) return;
+      floatingFavorites = [];
+      renderFloatingNavigator();
+    });
+}
+
+function syncFloatingTurnsFromAdapter(): void {
+  const adapter = getCurrentAdapter();
+  if (!adapter) return;
+  const turns = adapter.getLatestTurns();
+  const message = adapter.toTurnsMessage(turns);
+  const conversationChanged = message.conversationId.trim() !== floatingConversationId;
+  floatingTurns = conversationChanged ? turns : mergeFloatingTurns(floatingTurns, turns);
+  setFloatingConversationId(message.conversationId);
+}
+
+function storedFavoriteAsTurn(favorite: FloatingFavorite): Turn {
+  return {
+    id: `favorite:${favorite.identity}`,
+    turnIndex: favorite.turnIndex,
+    userText: favorite.userText,
+    assistantText: "",
+    sourceAnchor: favorite.sourceAnchor,
+    navigation: favorite.navigation,
+    extractedAt: favorite.savedAt
+  };
+}
+
+function floatingNavigatorEntries(): FloatingNavigatorEntry[] {
+  if (floatingNavigatorView === "all") {
+    return floatingTurns.map((turn) => ({
+      turn,
+      unavailable: false
+    }));
+  }
+  return resolveFloatingFavorites(floatingFavorites, floatingTurns).map(({ favorite, turn }) => ({
+    turn: turn ?? storedFavoriteAsTurn(favorite),
+    favorite,
+    unavailable: !turn
+  }));
+}
+
+function toggleFloatingFavorite(turn: Turn, favorite?: FloatingFavorite): void {
+  if (!floatingConversationId) return;
+  const previousFavorites = floatingFavorites;
+  const conversationId = floatingConversationId;
+  floatingFavorites = favorite && !floatingTurns.some((candidate) => candidate === turn)
+    ? floatingFavorites.filter((candidate) => candidate.identity !== favorite.identity)
+    : toggleTurnFavorite(turn, floatingFavorites);
+  renderFloatingNavigator();
+  const favoritesToSave = floatingFavorites;
+  floatingFavoritesSaveQueue = floatingFavoritesSaveQueue
+    .catch(() => undefined)
+    .then(() => saveFloatingFavorites(conversationId, favoritesToSave))
+    .catch(() => {
+      if (floatingConversationId !== conversationId || floatingFavorites !== favoritesToSave) return;
+      floatingFavorites = previousFavorites;
+      renderFloatingNavigator();
+    });
+}
 function floatingPanelEnabledKey(): string {
   return "turnmap.floatingPanel.enabled";
 }
@@ -143,7 +280,7 @@ function scheduleFloatingNavigatorOpen(): void {
   floatingNavigatorOpenTimer = window.setTimeout(() => {
     floatingNavigatorOpenTimer = null;
     if (!canShowFloatingNavigator()) return;
-    floatingTurns = activeAdapter?.getLatestTurns() ?? floatingTurns;
+    syncFloatingTurnsFromAdapter();
     ensureFloatingPanel();
   }, FLOATING_NAVIGATOR_HOVER_DELAY_MS);
 }
@@ -250,39 +387,101 @@ function renderFloatingNavigator(): void {
     : false;
   floatingPanel.innerHTML = "";
 
+  const tabs = document.createElement("div");
+  tabs.className = "turnmap-floating-tabs";
+  tabs.setAttribute("role", "tablist");
+  ([
+    ["all", "all", "\u2261"],
+    ["favorites", "favorites", "\u2605"]
+  ] as const).forEach(([view, labelKey, icon]) => {
+    const tab = document.createElement("button");
+    const label = floatingLabel(labelKey);
+    tab.type = "button";
+    tab.className = "turnmap-floating-tab";
+    tab.textContent = icon;
+    tab.title = label;
+    tab.setAttribute("aria-label", label);
+    tab.setAttribute("role", "tab");
+    tab.setAttribute("aria-selected", String(floatingNavigatorView === view));
+    if (floatingNavigatorView === view) tab.dataset.active = "true";
+    tab.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (floatingNavigatorView === view) return;
+      floatingNavigatorView = view;
+      renderFloatingNavigator();
+      positionFloatingNavigatorNearLauncher();
+    });
+    tabs.append(tab);
+  });
+
   const list = document.createElement("div");
   list.className = "turnmap-floating-list";
   list.addEventListener("wheel", containFloatingWheel, { passive: false });
   const activeTurnIndex = getVisibleChatGptTurnIndex();
-  floatingTurns.forEach((turn) => {
+  const entries = floatingNavigatorEntries();
+  entries.forEach(({ turn, favorite, unavailable }) => {
+    const card = document.createElement("article");
+    card.className = "turnmap-floating-card";
+    if (unavailable) card.dataset.unavailable = "true";
+
     const button = document.createElement("button");
     button.type = "button";
-    button.innerHTML = `<span>Turn ${turn.turnIndex + 1}</span><strong></strong>`;
-    button.title = "Jump to this conversation turn.";
+    button.className = "turnmap-floating-turn";
+    button.title = unavailable ? floatingLabel("unavailable") : floatingLabel("jump");
     button.dataset.turnIndex = String(turn.turnIndex);
-    if (turn.turnIndex === activeTurnIndex) {
+    if (turn.turnIndex === activeTurnIndex && !unavailable) {
       button.dataset.active = "true";
       button.setAttribute("aria-current", "true");
     }
-    button.querySelector("strong")!.textContent = previewText(turn.userText);
-    button.addEventListener("click", (event) => {
+    const turnLabel = document.createElement("span");
+    turnLabel.textContent = floatingLabel("turn", { number: turn.turnIndex + 1 });
+    const question = document.createElement("strong");
+    question.textContent = previewText(turn.userText);
+    button.append(turnLabel, question);
+    if (unavailable) {
+      button.disabled = true;
+      button.setAttribute("aria-disabled", "true");
+      const unavailableNote = document.createElement("p");
+      unavailableNote.textContent = floatingLabel("unavailable");
+      button.append(unavailableNote);
+    } else {
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        button.focus();
+        void performJumpToTurn({ type: "TURNMAP_JUMP_TO_TURN", navigation: turn.navigation, anchor: turn.sourceAnchor });
+      });
+    }
+
+    const favorited = Boolean(favorite) || isTurnFavorited(turn, floatingFavorites);
+    const favoriteButton = document.createElement("button");
+    favoriteButton.type = "button";
+    favoriteButton.className = "turnmap-floating-favorite";
+    favoriteButton.textContent = favorited ? "\u2605" : "\u2606";
+    favoriteButton.title = floatingLabel(favorited ? "removeFavorite" : "addFavorite");
+    favoriteButton.setAttribute("aria-label", favoriteButton.title);
+    favoriteButton.setAttribute("aria-pressed", String(favorited));
+    if (favorited) favoriteButton.dataset.active = "true";
+    favoriteButton.addEventListener("click", (event) => {
       event.preventDefault();
       event.stopPropagation();
-      button.focus();
-      void performJumpToTurn({ type: "TURNMAP_JUMP_TO_TURN", navigation: turn.navigation, anchor: turn.sourceAnchor });
+      toggleFloatingFavorite(turn, favorite);
     });
-    list.append(button);
+
+    card.append(button, favoriteButton);
+    list.append(card);
   });
 
-  if (floatingTurns.length === 0) {
+  if (entries.length === 0) {
     const empty = document.createElement("p");
-    empty.textContent = "No mapped turns yet.";
+    empty.textContent = floatingLabel(floatingNavigatorView === "favorites" ? "emptyFavorites" : "emptyAll");
     list.append(empty);
   }
 
-  floatingPanel.append(list);
+  floatingPanel.append(tabs, list);
   list.scrollTop = previousWasNearBottom ? list.scrollHeight : previousScrollTop;
-  if (activeTurnIndex !== null && previousList === null) {
+  if (activeTurnIndex !== null && previousList === null && floatingNavigatorView === "all") {
     list.querySelector<HTMLElement>(`button[data-turn-index="${activeTurnIndex}"]`)?.scrollIntoView({
       block: "center",
       inline: "nearest"
@@ -365,10 +564,31 @@ function ensureFloatingPanel(): void {
       font: inherit;
       padding: 5px 8px;
     }
+    .turnmap-floating-tabs {
+      display: flex;
+      gap: 5px;
+      margin-bottom: 8px;
+    }
+    .turnmap-floating-tab {
+      align-items: center;
+      display: inline-flex;
+      font-size: 16px !important;
+      height: 30px;
+      justify-content: center;
+      line-height: 1;
+      padding: 0 !important;
+      transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+      width: 30px;
+    }
+    .turnmap-floating-tab[data-active="true"] {
+      border-color: #10a37f;
+      box-shadow: inset 0 -2px 0 #10a37f;
+      color: #087b60;
+    }
     .turnmap-floating-list {
       display: grid;
       gap: 6px;
-      max-height: calc(min(60vh, calc(100vh - 16px)) - 20px);
+      max-height: calc(min(60vh, calc(100vh - 16px)) - 58px);
       min-height: 0;
       overflow-x: hidden;
       overflow-y: auto;
@@ -376,7 +596,13 @@ function ensureFloatingPanel(): void {
       scrollbar-gutter: stable;
       overscroll-behavior: contain;
     }
-    .turnmap-floating-list button {
+    .turnmap-floating-card {
+      display: grid;
+      gap: 6px;
+      grid-template-columns: minmax(0, 1fr) 32px;
+      min-width: 0;
+    }
+    .turnmap-floating-turn {
       box-sizing: border-box;
       display: grid;
       gap: 3px;
@@ -386,9 +612,32 @@ function ensureFloatingPanel(): void {
       text-align: left;
       width: 100%;
     }
-    .turnmap-floating-list button[data-active="true"] {
+    .turnmap-floating-turn[data-active="true"] {
       border-color: #10a37f;
       box-shadow: inset 3px 0 0 #10a37f;
+    }
+    .turnmap-floating-turn:disabled {
+      cursor: not-allowed;
+      opacity: 0.72;
+    }
+    .turnmap-floating-favorite {
+      align-self: start;
+      display: grid;
+      font-size: 18px !important;
+      height: 32px;
+      line-height: 1;
+      padding: 0 !important;
+      place-items: center;
+      transition: border-color 140ms ease, color 140ms ease, transform 140ms ease;
+      width: 32px;
+    }
+    .turnmap-floating-favorite:hover,
+    .turnmap-floating-favorite:focus-visible {
+      transform: translateY(-1px);
+    }
+    .turnmap-floating-favorite[data-active="true"] {
+      border-color: #d79716;
+      color: #d79716;
     }
     .turnmap-floating-list span {
       color: var(--turnmap-float-muted);
@@ -427,7 +676,7 @@ function setFloatingPanel(enabled: boolean, persist = true): void {
   }
   floatingNavigatorEnabled = enabled;
   if (enabled) {
-    floatingTurns = getCurrentAdapter()?.getLatestTurns() ?? [];
+    syncFloatingTurnsFromAdapter();
   } else {
     removeFloatingPanel();
   }
@@ -638,12 +887,13 @@ function syncLauncherFromStorage(): void {
 function startTurnMapContentUi(): void {
   syncLauncherFromStorage();
   startPromptWorkbench();
+  refreshFloatingNavigatorTranslations();
   window.addEventListener("resize", positionFloatingNavigatorNearLauncher);
 
   void chrome.storage.local.get(floatingPanelEnabledKey()).then((result) => {
     if (result[floatingPanelEnabledKey()]) {
       floatingNavigatorEnabled = true;
-      floatingTurns = activeAdapter?.getLatestTurns() ?? [];
+      syncFloatingTurnsFromAdapter();
     }
   });
 }
@@ -665,6 +915,9 @@ function startTurnMapContentStorageListener(): void {
     }
     if (themeStorageKey() in changes) {
       applyFloatingTheme(normalizeFloatingTheme(changes[themeStorageKey()].newValue));
+    }
+    if (LANGUAGE_STORAGE_KEY in changes || CUSTOM_LANGUAGES_STORAGE_KEY in changes) {
+      refreshFloatingNavigatorTranslations();
     }
   });
 }

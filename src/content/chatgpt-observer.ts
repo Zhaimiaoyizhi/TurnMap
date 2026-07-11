@@ -16,6 +16,7 @@ let latestTurns: Turn[] = [];
 let observer: MutationObserver | null = null;
 let debounceTimer: number | null = null;
 let lastHarvestMeta: HarvestMeta | undefined;
+let latestTurnsConversationId = "";
 
 function isFullConversationSource(source: HarvestMeta["source"]): boolean {
   return (
@@ -31,7 +32,9 @@ function shouldReplaceLatestTurns(source: HarvestMeta["source"]): boolean {
 }
 
 function emitTurns(listener: TurnsListener): void {
+  const conversationId = resetLatestTurnsForConversation();
   void getNonDisruptiveTurns().then((turns) => {
+    if (conversationId !== getConversationId()) return;
     latestTurns = lastHarvestMeta && shouldReplaceLatestTurns(lastHarvestMeta.source)
       ? turns
       : mergeTurns(latestTurns, turns);
@@ -47,6 +50,15 @@ export function getConversationTitle(): string {
 export function getConversationId(): string {
   const match = window.location.pathname.match(/\/c\/([^/?#]+)/);
   return match?.[1] ?? window.location.href;
+}
+
+function resetLatestTurnsForConversation(): string {
+  const conversationId = getConversationId();
+  if (conversationId === latestTurnsConversationId) return conversationId;
+  latestTurnsConversationId = conversationId;
+  latestTurns = [];
+  lastHarvestMeta = undefined;
+  return conversationId;
 }
 
 function setSourceMeta(source: HarvestMeta["source"], turns: Turn[]): void {
@@ -116,6 +128,7 @@ export async function harvestTurnsByScrolling(): Promise<Turn[]> {
 }
 
 export function getLatestTurns(): Turn[] {
+  resetLatestTurnsForConversation();
   if (latestTurns.length === 0) {
     latestTurns = attachOphelNavigationToTurns(normalizeTurnIndexes(extractTurns()));
   }
@@ -123,7 +136,9 @@ export function getLatestTurns(): Turn[] {
 }
 
 export async function refreshLatestTurns(): Promise<Turn[]> {
+  const conversationId = resetLatestTurnsForConversation();
   const turns = await getNonDisruptiveTurns();
+  if (conversationId !== getConversationId()) return refreshLatestTurns();
   latestTurns = lastHarvestMeta && shouldReplaceLatestTurns(lastHarvestMeta.source)
     ? turns
     : mergeTurns(latestTurns, turns);
