@@ -1,8 +1,6 @@
 ﻿import type { ConversationSite } from "./adapter-registry";
-import type { JumpToTurnResult, SourceAnchor, Turn } from "../shared/types";
-import { loadReadingBehaviorSettings } from "./reading-settings.ts";
+import type { SourceAnchor, Turn } from "../shared/types";
 import { stableTurnIdAssigner } from "../shared/turn-id.ts";
-import { smartHarvestByScrolling } from "./smart-scroll-harvest.ts";
 
 export type ConversationBlock = {
   role: "user" | "assistant";
@@ -60,6 +58,8 @@ export type WebExtractionDiagnostics = {
 
 export type WebConversationProfile = {
   site: ConversationSite;
+  conversationRootSelector?: string;
+  messageIdAttributes?: string[];
   titleSuffixPattern?: RegExp;
   userSelectors: string[];
   assistantSelectors: string[];
@@ -176,10 +176,6 @@ const TITLE_ACTION_TEXT_PATTERN =
 
 const lastDiagnostics = new Map<string, WebExtractionDiagnostics>();
 const WEB_HIGHLIGHT_CLASS = "turnmap-source-highlight";
-
-function delay(milliseconds: number): Promise<void> {
-  return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
-}
 
 function ensureWebHighlightStyle(): void {
   if (document.getElementById("turnmap-highlight-style")) return;
@@ -596,19 +592,18 @@ function candidateFromElement(
     text,
     top: rect.top + window.scrollY,
     element,
-    elementId: elementId(element, role, index),
+    elementId: elementId(element, role, index, profile),
     excluded: false
   };
 }
 
-function elementId(element: HTMLElement, role: ConversationBlock["role"], index: number): string {
-  return (
-    element.getAttribute("data-message-id") ||
-    element.getAttribute("data-turn-id") ||
-    element.getAttribute("data-id") ||
-    element.getAttribute("id") ||
-    `${role}-${index}-${hashText(normalizeWebText(element.textContent ?? ""))}`
-  );
+function elementId(element: HTMLElement, role: ConversationBlock["role"], index: number, profile: WebConversationProfile): string {
+  const attributes = profile.messageIdAttributes ?? ["data-message-id", "data-turn-id", "data-id", "id"];
+  for (const attribute of attributes) {
+    const value = element.getAttribute(attribute);
+    if (value) return value;
+  }
+  return `${role}-${index}-${hashText(normalizeWebText(element.textContent ?? ""))}`;
 }
 
 function elementIsVisible(element: HTMLElement): boolean {
@@ -702,14 +697,18 @@ function extractRoleBlocksFromDocument(
 }
 
 export function extractBlocksFromDocument(profile: WebConversationProfile, root: ParentNode = document): ConversationBlock[] {
-  const roleBlocks = extractRoleBlocksFromDocument(profile, root);
+  const extractionRoot =
+    root === document && profile.conversationRootSelector
+      ? document.querySelector(profile.conversationRootSelector) ?? document
+      : root;
+  const roleBlocks = extractRoleBlocksFromDocument(profile, extractionRoot);
   if (blocksToTurns(roleBlocks).length > 0) return roleBlocks;
 
   const blocks: ConversationBlock[] = [];
 
   for (const role of ["user", "assistant"] as const) {
     const selectors = role === "user" ? profile.userSelectors : profile.assistantSelectors;
-    uniqueElements(selectors, root).forEach((element) => {
+    uniqueElements(selectors, extractionRoot).forEach((element) => {
       const messageRoot = closestMessageRoot(element, profile);
       const rawText = readElementText(messageRoot, profile);
       const text = cleanProfileText(profile, rawText, role);
@@ -719,7 +718,7 @@ export function extractBlocksFromDocument(profile: WebConversationProfile, root:
         role,
         text,
         element: messageRoot,
-        elementId: elementId(messageRoot, role, blocks.length)
+        elementId: elementId(messageRoot, role, blocks.length, profile)
       });
     });
   }
@@ -767,15 +766,6 @@ function isScrollable(element: HTMLElement): boolean {
   );
 }
 
-function describeElement(element: HTMLElement): string {
-  const id = element.id ? `#${element.id}` : "";
-  const className =
-    typeof element.className === "string"
-      ? `.${element.className.trim().split(/\s+/).slice(0, 3).join(".")}`
-      : "";
-  return `${element.tagName.toLowerCase()}${id}${className}`;
-}
-
 function getWebChatScrollCandidates(profile: WebConversationProfile): HTMLElement[] {
   const fallback = (document.scrollingElement ?? document.documentElement) as HTMLElement;
   const explicit = profile.scrollContainerSelectors?.flatMap((selector) =>
@@ -808,39 +798,6 @@ function getWebChatScrollCandidates(profile: WebConversationProfile): HTMLElemen
 
 export function getWebChatScrollElement(profile: WebConversationProfile): HTMLElement {
   return getWebChatScrollCandidates(profile)[0] ?? ((document.scrollingElement ?? document.documentElement) as HTMLElement);
-}
-
-export async function harvestWebTurnsByScrolling(profile: WebConversationProfile): Promise<{
-  turns: Turn[];
-  scrollElement: HTMLElement;
-  scannedSteps: number;
-}> {
-  const scrollElement = getWebChatScrollElement(profile);
-  const originalTop = scrollElement.scrollTop;
-  const settings = await loadReadingBehaviorSettings();
-  const result = await (async () => {
-    try {
-      return await smartHarvestByScrolling({
-        scrollElement,
-        collectTurns: () => extractTurnsFromDocument(profile),
-        mergeTurns: mergeWebTurns,
-        normalizeTurns: normalizeWebTurnIndexes,
-        settings
-      });
-    } finally {
-      scrollElement.scrollTo({ top: originalTop, behavior: "instant" });
-    }
-  })();
-
-  return {
-    turns: result.turns,
-    scrollElement,
-    scannedSteps: result.scannedSteps
-  };
-}
-
-export function describeWebScrollElement(element: HTMLElement): string {
-  return describeElement(element);
 }
 
 export function extractBlocksWithFallback(profile: WebConversationProfile, root: ParentNode = document): ConversationBlock[] {
@@ -893,103 +850,6 @@ export function getWebConversationId(profile: WebConversationProfile): string {
   return `${profile.site.id}:${window.location.pathname || window.location.href}`;
 }
 
-function findKnownTurn(anchor: SourceAnchor, knownTurns: Turn[]): Turn | undefined {
-  return (
-    knownTurns.find(
-      (turn) =>
-        turn.sourceAnchor.userHash === anchor.userHash && turn.sourceAnchor.assistantHash === anchor.assistantHash
-    ) ?? knownTurns.find((turn) => turn.turnIndex === anchor.turnIndex)
-  );
-}
-
-function findKnownUserBlockIndex(block: ConversationBlock, knownTurns: Turn[]): number | null {
-  const rawText = normalizeWebText(block.text);
-  const textHash = hashText(rawText);
-  const match = knownTurns.find((turn) => {
-    const anchor = turn.sourceAnchor;
-    if (anchor.userMessageId && block.elementId === anchor.userMessageId && textHash === anchor.userHash) return true;
-    if (textHash === anchor.userHash) return true;
-    return Boolean(anchor.userPreview && rawText.includes(anchor.userPreview));
-  });
-
-  return match?.turnIndex ?? null;
-}
-
-function getVisibleWebTurnIndexRange(
-  knownTurns: Turn[],
-  profile: WebConversationProfile
-): { first: number; last: number; count: number } | null {
-  if (knownTurns.length === 0) return null;
-
-  const indexes = extractBlocksWithFallback(profile)
-    .filter((block) => block.role === "user")
-    .map((block) => findKnownUserBlockIndex(block, knownTurns))
-    .filter((index): index is number => index !== null)
-    .sort((left, right) => left - right);
-
-  if (indexes.length === 0) return null;
-  return {
-    first: indexes[0],
-    last: indexes[indexes.length - 1],
-    count: indexes.length
-  };
-}
-
-function getWebSearchDirection(
-  anchor: SourceAnchor,
-  knownTurns: Turn[],
-  profile: WebConversationProfile,
-  scrollElement: HTMLElement
-): "up" | "down" {
-  const range = getVisibleWebTurnIndexRange(knownTurns, profile);
-
-  if (range) {
-    if (anchor.turnIndex < range.first) return "up";
-    if (anchor.turnIndex > range.last) return "down";
-
-    const midpoint = (range.first + range.last) / 2;
-    return anchor.turnIndex < midpoint ? "up" : "down";
-  }
-
-  if (knownTurns.length > 1) {
-    const maxScrollTop = Math.max(1, scrollElement.scrollHeight - scrollElement.clientHeight);
-    const scrollRatio = scrollElement.scrollTop / maxScrollTop;
-    const estimatedCurrentTurn = scrollRatio * (knownTurns.length - 1);
-    return anchor.turnIndex < estimatedCurrentTurn ? "up" : "down";
-  }
-
-  return anchor.turnIndex === 0 ? "up" : "down";
-}
-
-export function findWebTurnElement(anchor: SourceAnchor, knownTurns: Turn[], profile: WebConversationProfile): HTMLElement | null {
-  const blocks = extractBlocksWithFallback(profile);
-  const userBlocks = blocks.filter((block) => block.role === "user" && block.element);
-  const known = findKnownTurn(anchor, knownTurns);
-  const targetPreview = normalizeWebText(anchor.userPreview || known?.sourceAnchor.userPreview || "");
-  const knownUserHash = known ? hashText(normalizeWebText(known.userText)) : "";
-  let previewMatch: HTMLElement | null = null;
-
-  for (const block of userBlocks) {
-    const rawText = normalizeWebText(block.text);
-    const textHash = hashText(rawText);
-    const textMatches = textHash === anchor.userHash || (knownUserHash && textHash === knownUserHash);
-    const idLooksUnique = Boolean(
-      anchor.userMessageId && !/^(user|assistant)-message$|^(user|assistant)-\d+-/i.test(anchor.userMessageId)
-    );
-    if (anchor.userMessageId && block.elementId === anchor.userMessageId && (idLooksUnique || textMatches)) {
-      return block.element ?? null;
-    }
-    if (textMatches) {
-      return block.element ?? null;
-    }
-    if (targetPreview && rawText.includes(targetPreview) && !previewMatch) {
-      previewMatch = block.element ?? null;
-    }
-  }
-
-  return previewMatch;
-}
-
 function getNearestScrollableAncestor(element: HTMLElement): HTMLElement | null {
   for (let current = element.parentElement; current; current = current.parentElement) {
     if (isScrollable(current)) return current;
@@ -1024,113 +884,4 @@ export function revealWebTurnElement(element: HTMLElement, scrollElement?: HTMLE
   window.setTimeout(() => {
     element.classList.remove(WEB_HIGHLIGHT_CLASS);
   }, 2200);
-}
-
-function webJumpSearchDelta(scrollElement: HTMLElement, strength: number): number {
-  const scrollRange = Math.max(0, scrollElement.scrollHeight - scrollElement.clientHeight);
-  const viewport = Math.max(240, scrollElement.clientHeight || 0);
-  const safeStrength = Math.max(0.5, Math.min(2, strength));
-  if (scrollRange <= viewport * 2.5) return Math.max(120, Math.min(560, viewport * 0.35 * safeStrength));
-  return Math.max(240, Math.min(1150, viewport * 0.62 * safeStrength));
-}
-
-function webJumpSearchStepLimit(scrollElement: HTMLElement, requestedMaxSteps: number, strength: number): number {
-  const scrollRange = Math.max(0, scrollElement.scrollHeight - scrollElement.clientHeight);
-  const byDistance = Math.ceil(scrollRange / Math.max(1, webJumpSearchDelta(scrollElement, strength))) + 3;
-  return Math.max(2, Math.min(requestedMaxSteps, byDistance));
-}
-
-async function searchWebTurnInDirection(
-  anchor: SourceAnchor,
-  knownTurns: Turn[],
-  profile: WebConversationProfile,
-  scrollElement: HTMLElement,
-  direction: "up" | "down",
-  maxSteps: number,
-  strength: number
-): Promise<HTMLElement | null> {
-  const boundedMaxSteps = webJumpSearchStepLimit(scrollElement, maxSteps, strength);
-  let blockedSteps = 0;
-
-  for (let step = 0; step < boundedMaxSteps; step += 1) {
-    const candidate = findWebTurnElement(anchor, knownTurns, profile);
-    if (candidate) return candidate;
-
-    const currentTop = scrollElement.scrollTop;
-    const delta = webJumpSearchDelta(scrollElement, strength);
-    const nextTop =
-      direction === "up"
-        ? Math.max(0, currentTop - delta)
-        : Math.min(scrollElement.scrollHeight, currentTop + delta);
-
-    if (Math.abs(nextTop - currentTop) < 4) break;
-
-    scrollElement.scrollTo({ top: nextTop, behavior: "instant" });
-    await delay(120);
-    if (Math.abs(scrollElement.scrollTop - currentTop) < 4) {
-      blockedSteps += 1;
-      if (blockedSteps >= 2) break;
-    } else {
-      blockedSteps = 0;
-    }
-  }
-
-  return null;
-}
-
-export async function scrollToWebTurn(
-  anchor: SourceAnchor,
-  knownTurns: Turn[],
-  profile: WebConversationProfile
-): Promise<JumpToTurnResult> {
-  const element = findWebTurnElement(anchor, knownTurns, profile);
-  if (element) {
-    revealWebTurnElement(element, getWebChatScrollElement(profile));
-    return { ok: true };
-  }
-
-  const scrollCandidates = getWebChatScrollCandidates(profile);
-  const settings = await loadReadingBehaviorSettings();
-  const strength = settings.jumpSearchStrength;
-
-  for (const scrollElement of scrollCandidates) {
-    const originalTop = scrollElement.scrollTop;
-    const direction = getWebSearchDirection(anchor, knownTurns, profile, scrollElement);
-
-    const directedCandidate = await searchWebTurnInDirection(
-      anchor,
-      knownTurns,
-      profile,
-      scrollElement,
-      direction,
-      120,
-      strength
-    );
-    if (directedCandidate) {
-      revealWebTurnElement(directedCandidate, scrollElement);
-      return { ok: true };
-    }
-
-    scrollElement.scrollTo({ top: originalTop, behavior: "instant" });
-    await delay(120);
-
-    const fallbackDirection = direction === "up" ? "down" : "up";
-    const fallbackCandidate = await searchWebTurnInDirection(
-      anchor,
-      knownTurns,
-      profile,
-      scrollElement,
-      fallbackDirection,
-      60,
-      strength
-    );
-    if (fallbackCandidate) {
-      revealWebTurnElement(fallbackCandidate, scrollElement);
-      return { ok: true };
-    }
-
-    scrollElement.scrollTo({ top: originalTop, behavior: "instant" });
-  }
-
-  return { ok: false, reason: `The original ${profile.site.displayName} turn could not be found.` };
 }

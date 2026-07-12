@@ -1,5 +1,6 @@
 ﻿import type { ExtractedTurnsMessage, JumpToTurnMessage, Turn } from "../shared/types";
 import { selectConversationAdapter, type ConversationAdapter } from "./conversation-adapters";
+import { previewCustomSiteProfile, selectConversationAdapterAsync } from "./custom-site-adapter";
 import { getTurnMapLauncherIconUrl, loadTurnMapLauncherIconSrc } from "./launcher-icon";
 import { startPromptWorkbench } from "./prompt-workbench";
 import { mergeTurns } from "./turn-extractor";
@@ -50,7 +51,13 @@ function broadcastTurns(message: ExtractedTurnsMessage): void {
   });
 }
 
-const activeAdapter = selectConversationAdapter();
+let activeAdapter: ConversationAdapter | null = selectConversationAdapter();
+const activeAdapterReady: Promise<ConversationAdapter | null> = activeAdapter
+  ? Promise.resolve(activeAdapter)
+  : selectConversationAdapterAsync(new URL(window.location.href), activeAdapter).then((adapter) => {
+      activeAdapter = adapter;
+      return adapter;
+    });
 
 function getCurrentAdapter(): ConversationAdapter | null {
   return activeAdapter;
@@ -324,10 +331,10 @@ function positionFloatingNavigatorNearLauncher(): void {
   floatingPanel.style.bottom = "auto";
 }
 
-function performJumpToTurn(message: JumpToTurnMessage): Promise<unknown> {
-  const adapter = getCurrentAdapter();
+async function performJumpToTurn(message: JumpToTurnMessage): Promise<unknown> {
+  const adapter = await activeAdapterReady;
   if (!adapter) {
-    return Promise.resolve({ ok: false, reason: "This AI conversation site is not supported yet." });
+    return { ok: false, reason: "This AI conversation site is not supported yet." };
   }
 
   return adapter.jumpToTurn({ navigation: message.navigation, anchor: message.anchor });
@@ -911,8 +918,8 @@ function startTurnMapContentUi(): void {
   });
 }
 
-function startTurnMapContentObservers(): void {
-  activeAdapter?.startObserver((turns) => broadcastTurns(activeAdapter.toTurnsMessage(turns)));
+function startTurnMapContentObservers(adapter: ConversationAdapter | null = activeAdapter): void {
+  adapter?.startObserver((turns) => broadcastTurns(adapter.toTurnsMessage(turns)));
 }
 
 function startTurnMapContentStorageListener(): void {
@@ -950,32 +957,32 @@ function startTurnMapContentMessageListener(): void {
     if (!isContentMessage(message)) return false;
 
     if (message.type === "TURNMAP_REQUEST_TURNS") {
-      const adapter = getCurrentAdapter();
-      if (!adapter) {
-        sendResponse(toUnsupportedTurnsMessage());
-        return true;
-      }
+      void (async () => {
+        const adapter = await activeAdapterReady;
+        if (!adapter) {
+          sendResponse(toUnsupportedTurnsMessage());
+          return;
+        }
 
-      if ("harvest" in message && message.harvest) {
-        adapter
-          .harvestTurnsByScrolling()
+        const operation =
+          "harvest" in message && message.harvest
+            ? adapter.harvestTurnsByScrolling()
+            : "ensureFull" in message && message.ensureFull
+              ? adapter.refreshCompleteTurns()
+              : adapter.refreshLatestTurns();
+        operation
           .then((turns) => sendResponse(adapter.toTurnsMessage(turns)))
           .catch(() => sendResponse(adapter.toTurnsMessage(adapter.getLatestTurns())));
-        return true;
-      }
+      })();
+      return true;
+    }
 
-      if ("ensureFull" in message && message.ensureFull) {
-        adapter
-          .refreshCompleteTurns()
-          .then((turns) => sendResponse(adapter.toTurnsMessage(turns)))
-          .catch(() => sendResponse(adapter.toTurnsMessage(adapter.getLatestTurns())));
-        return true;
-      }
-
-      adapter
-        .refreshLatestTurns()
-        .then((turns) => sendResponse(adapter.toTurnsMessage(turns)))
-        .catch(() => sendResponse(adapter.toTurnsMessage(adapter.getLatestTurns())));
+    if (message.type === "TURNMAP_VALIDATE_CUSTOM_SITE") {
+      sendResponse(
+        previewCustomSiteProfile(
+          (message as unknown as { profile: Parameters<typeof previewCustomSiteProfile>[0] }).profile
+        )
+      );
       return true;
     }
 
@@ -1011,7 +1018,11 @@ if (!window.__chatMapContentStarted || launcherNeedsRepair) {
   startTurnMapContentUi();
 }
 
-startTurnMapContentObservers();
 startTurnMapContentStorageListener();
 startTurnMapContentThemeMediaListener();
 startTurnMapContentMessageListener();
+void (async () => {
+  const adapter = await activeAdapterReady;
+  startTurnMapContentObservers(adapter);
+  if (adapter && floatingNavigatorEnabled) syncFloatingTurnsFromAdapter();
+})();

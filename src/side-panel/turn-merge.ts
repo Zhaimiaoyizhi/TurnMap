@@ -1,7 +1,9 @@
 import type { Turn } from "../shared/types";
 import { sourceAnchorMatches } from "./graph/source-anchors.ts";
 
-export type TurnUpdateMode = "replace" | "refresh" | "deep-scan";
+export type TurnUpdateMode = "replace" | "refresh" | "refresh-index";
+
+const EMPTY_ASSISTANT_REPLY = "No text response";
 
 function sameTurn(left: Turn, right: Turn): boolean {
   return left.id === right.id || sourceAnchorMatches(left.sourceAnchor, right.sourceAnchor);
@@ -13,6 +15,16 @@ function findTurnIndex(turns: Turn[], target: Turn): number {
 
 function maxExistingTurnIndex(turns: Turn[]): number {
   return Math.max(-1, ...turns.map((turn) => turn.turnIndex));
+}
+
+function enrichStreamedPlaceholder(existing: Turn, incoming: Turn): Turn {
+  if (
+    existing.assistantText.trim() === EMPTY_ASSISTANT_REPLY &&
+    incoming.assistantText.trim() !== EMPTY_ASSISTANT_REPLY
+  ) {
+    return incoming;
+  }
+  return existing;
 }
 
 function appendAfter(result: Turn[], anchor: Turn, incoming: Turn): void {
@@ -42,7 +54,10 @@ export function mergeTurnUpdates(
     return { turns: incomingTurns, added: Math.max(0, incomingTurns.length - existingTurns.length) };
   }
 
-  const result = [...existingTurns];
+  const result = existingTurns.map((existing) => {
+    const incoming = incomingTurns.find((candidate) => sameTurn(existing, candidate));
+    return incoming ? enrichStreamedPlaceholder(existing, incoming) : existing;
+  });
   let added = 0;
 
   if (mode === "refresh") {

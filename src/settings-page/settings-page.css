@@ -262,6 +262,65 @@
   grid-column: span 2;
 }
 
+.custom-sites-settings {
+  grid-column: span 2;
+}
+
+.custom-sites-settings__profiles {
+  display: grid;
+  gap: 10px;
+}
+
+.custom-sites-settings__profile,
+.custom-sites-settings__preview {
+  background: var(--cm-item-bg);
+  border: 1px solid var(--cm-border);
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px;
+}
+
+.custom-sites-settings__profile > div:first-child {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.custom-sites-settings__profile code,
+.custom-sites-settings__preview code {
+  color: var(--cm-text-muted);
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.custom-sites-settings__profile .is-enabled {
+  color: var(--cm-success-text);
+}
+
+.custom-sites-settings__profile .is-disabled {
+  color: var(--cm-text-muted);
+}
+
+.custom-sites-settings__actions,
+.custom-sites-settings__backup {
+  align-items: end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.custom-sites-settings__status {
+  background: var(--cm-teal-soft);
+  border: 1px solid var(--cm-success-border);
+  border-radius: 8px;
+  color: var(--cm-success-text) !important;
+  padding: 10px;
+}
+
 .prompt-workbench-settings textarea {
   background: var(--cm-surface);
   border: 1px solid var(--cm-border);
@@ -383,6 +442,10 @@
   }
 
   .prompt-workbench-settings {
+    grid-column: auto;
+  }
+
+  .custom-sites-settings {
     grid-column: auto;
   }
 

@@ -94,6 +94,41 @@ test("graph storage preserves sourceAnchors for turn node overrides", async () =
   await resetStoredGraph("conversation-2");
 });
 
+test("graph storage does not freeze generated turn text as a manual override", async () => {
+  withChromeStorage();
+  const pendingTurn = {
+    id: "turn-streaming",
+    turnIndex: 0,
+    userText: "Reply exactly: TurnMap QA 1",
+    assistantText: "No text response",
+    extractedAt: 1,
+    sourceAnchor: { ...SOURCE_ANCHOR, turnIndex: 0 }
+  };
+
+  await saveStoredGraph(
+    "conversation-streaming",
+    [
+      {
+        id: pendingTurn.id,
+        position: { x: 0, y: 0 },
+        data: {
+          title: "Reply exactly: TurnMap QA 1",
+          summary: "No text response",
+          turn: pendingTurn
+        }
+      }
+    ],
+    []
+  );
+
+  const stored = await loadStoredGraph("conversation-streaming");
+
+  assert.equal(stored.nodeOverrides[pendingTurn.id].title, undefined);
+  assert.equal(stored.nodeOverrides[pendingTurn.id].summary, undefined);
+
+  await resetStoredGraph("conversation-streaming");
+});
+
 test("graph storage saves schema v4 dimensions and answer expansion data", async () => {
   withChromeStorage();
 

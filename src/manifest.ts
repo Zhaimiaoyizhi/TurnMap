@@ -3,7 +3,7 @@
 const manifest: Manifest = {
   manifest_version: 3,
   name: "TurnMap",
-  version: "0.8.3",
+  version: "0.8.4",
   description: "Turn AI conversations into editable mind maps.",
   icons: {
     "16": "icons/turnmap-16.png",

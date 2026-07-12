@@ -1,9 +1,11 @@
 ﻿import type {
   TurnMapMessage,
+  CustomSitePreviewResult,
   ExtractedTurnsMessage,
   JumpToTurnMessage,
   JumpToTurnResult
 } from "./types";
+import { validateCustomSiteProfileDraft, type CustomSiteProfileDraft } from "./custom-site-profiles";
 
 export function isTurnMapMessage(value: unknown): value is TurnMapMessage {
   return Boolean(
@@ -130,12 +132,62 @@ async function requestHostAccess(tabUrl?: string): Promise<boolean> {
     return false;
   }
 
+  return requestExactHostAccess(origin);
+}
+
+export async function requestExactHostAccess(permissionPattern: string): Promise<boolean> {
   try {
-    const alreadyGranted = await chrome.permissions.contains({ origins: [origin] });
+    const originText = permissionPattern.endsWith("/*") ? permissionPattern.slice(0, -2) : "";
+    const url = new URL(originText);
+    if ((url.protocol !== "https:" && url.protocol !== "http:") || permissionPattern !== `${url.origin}/*`) return false;
+    const alreadyGranted = await chrome.permissions.contains({ origins: [permissionPattern] });
     if (alreadyGranted) return true;
-    return await chrome.permissions.request({ origins: [origin] });
+    return await chrome.permissions.request({ origins: [permissionPattern] });
   } catch {
     return false;
+  }
+}
+
+export async function previewCustomSiteOnActiveTab(
+  profile: CustomSiteProfileDraft,
+  tabId?: number
+): Promise<CustomSitePreviewResult> {
+  const validation = validateCustomSiteProfileDraft(profile);
+  const empty = (reason: string): CustomSitePreviewResult => ({
+    ok: false,
+    reason,
+    title: "",
+    conversationRoots: 0,
+    userMessages: 0,
+    assistantMessages: 0,
+    userSamples: [],
+    assistantSamples: []
+  });
+  if (!validation.ok) return empty(validation.errors.map((error) => error.message).join(" "));
+
+  const tab = await getTargetTab(tabId);
+  if (!tab?.id || !tab.url) return empty("No active page is available for custom-site validation.");
+  try {
+    if (new URL(tab.url).origin !== validation.normalized.origin) {
+      return empty(`Open ${validation.normalized.origin} in the active tab before validating this profile.`);
+    }
+  } catch {
+    return empty("The active tab URL is not a valid http/https page.");
+  }
+
+  if (!(await requestExactHostAccess(validation.normalized.permissionPattern))) {
+    return empty("Host permission was not granted. The profile remains saved but disabled.");
+  }
+  if (!(await injectContentScript(tab.id, tab.url))) return empty("TurnMap could not inject the fixed validation bridge.");
+  await delay(150);
+  try {
+    const response = await chrome.tabs.sendMessage(tab.id, {
+      type: "TURNMAP_VALIDATE_CUSTOM_SITE",
+      profile
+    });
+    return response as CustomSitePreviewResult;
+  } catch {
+    return empty("TurnMap could not read the validation result from the active page.");
   }
 }
 

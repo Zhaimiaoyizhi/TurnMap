@@ -35,6 +35,7 @@ It currently maps the active conversation on supported AI websites. Cross-conver
 - **Multi-site web AI support**: map conversations from ChatGPT, Gemini, Claude.ai, DeepSeek, Kimi, Doubao, Qwen, Perplexity, Grok, GLM / Z.ai, Mistral, Arena / LMArena, and more.
 - **Export and restore**: export TurnMap JSON, Obsidian Canvas, OPML, Obsidian vault Markdown, Markdown, SVG, and PNG. Use TurnMap JSON for the most complete editable backup.
 - **Local-first storage**: keep graph state, UI preferences, and generated language packs in the local browser profile.
+- **Safe custom sites**: add selector-only profiles that stay disabled until exact-origin permission and an active-page preview succeed; back them up separately from maps.
 
 ## Supported Site Capabilities
 
@@ -46,13 +47,13 @@ ChatGPT is TurnMap's verified native reference route. The other built-in adapter
 | DeepSeek | Identity-first mounted DOM fallback | Exact mounted-identity jump | Best effort | Unmounted turns fail safely; no scroll/text search. |
 | Kimi | Identity-first mounted DOM fallback | Exact mounted-identity jump | Best effort | Unmounted turns fail safely; no scroll/text search. |
 | Doubao | Identity-first mounted DOM fallback | Exact mounted-identity jump | Best effort | Unmounted turns fail safely; no scroll/text search. |
-| Qwen | Identity-first mounted DOM fallback | Exact mounted-identity jump | Best effort | Unmounted turns fail safely; no scroll/text search. |
-| Gemini | Identity-first mounted DOM fallback | Exact mounted-identity jump | Best effort | Unmounted turns fail safely; no scroll/text search. |
+| Qwen | Identity-first mounted DOM fallback | Exact mounted-identity jump | Best effort | Two repeated mounted turns smoke-tested; no off-screen/native claim. |
+| Gemini | Identity-first mounted DOM fallback | Exact mounted-identity jump | Best effort | Two repeated mounted turns smoke-tested; no off-screen/native claim. |
 | Google AI Studio | Identity-first mounted DOM fallback | Exact mounted-identity jump | Best effort | Unmounted turns fail safely; no scroll/text search. |
 | Claude | Identity-first mounted DOM fallback | Exact mounted-identity jump | Best effort | Unmounted turns fail safely; no scroll/text search. |
 | Perplexity | Identity-first mounted DOM fallback | Exact mounted-identity jump | Best effort | Unmounted turns fail safely; no scroll/text search. |
 | Grok | Identity-first mounted DOM fallback | Exact mounted-identity jump | Best effort | Unmounted turns fail safely; no scroll/text search. |
-| GLM / Z.ai | Identity-first mounted DOM fallback | Exact mounted-identity jump | Best effort | Unmounted turns fail safely; no scroll/text search. |
+| GLM / Z.ai | Identity-first mounted DOM fallback | Exact mounted-identity jump | Best effort | One mounted turn smoke-tested; no off-screen/native claim. |
 | Mistral Le Chat | Identity-first mounted DOM fallback | Exact mounted-identity jump | Best effort | Unmounted turns fail safely; no scroll/text search. |
 | Arena / LMArena | Identity-first mounted DOM fallback | Exact mounted-identity jump | Best effort | Battle mode reads the selected answer side; unmounted turns fail safely. |
 
@@ -82,7 +83,7 @@ TurnMap can export both editable backups and shareable visual files. For long-te
 
 ### Tune The Workspace
 
-The settings page keeps provider setup, interface defaults, themes, language packs, link style, node color rendering, Reading and Jumping behavior, launcher behavior, and update preferences away from the map canvas.
+The settings page keeps provider setup, prompt workbench data, safe custom-site profiles, interface defaults, themes, language packs, link style, node color rendering, launcher behavior, and update preferences away from the map canvas.
 
 ![TurnMap settings page with AI provider, interface, language, link style, and node color rendering controls](docs/assets/设置截图页.png)
 
@@ -135,7 +136,7 @@ For preview builds, download the release zip from GitHub Releases, unzip it, and
 
 GitHub/unpacked installs require manual updates. Store distribution is the right path for automatic browser-managed updates.
 
-Latest local preview package: `turnmap-v0.8.3.zip`. This build keeps ChatGPT's verified native full-index route and migrates every other built-in adapter to identity-first mounted-DOM extraction and exact mounted-target jumping without legacy scroll/text-search fallback. For long-term backup or transfer, export TurnMap JSON first because it preserves TurnMap-specific editing state more completely than visual formats.
+Latest local preview package: `turnmap-v0.8.4.zip`. This build keeps ChatGPT's verified native full-index route, completes evidence-tracked identity-first mounted-DOM navigation for every other built-in adapter, removes legacy scroll/text-search behavior, and adds permission-gated selector-only custom sites. For long-term backup or transfer, export TurnMap JSON first because it preserves TurnMap-specific editing state more completely than visual formats.
 
 ## Basic Usage
 
@@ -163,6 +164,7 @@ TurnMap has a dedicated settings page for global UI preferences:
 - **Link style**: choose curved or angled normal-node links. Mini nodes and their internal mini-map links keep their compact built-in style.
 - **AI output budget**: adjust `max_tokens`, which caps output length but does not change the model's context window.
 - **Entry points**: manage Side Panel, Full Page, Float, and page launcher preferences.
+- **Custom sites**: save local selector profiles, request only their exact origin, validate against the active page, and import/export them as a separate JSON backup.
 
 ## AI Features
 
@@ -210,7 +212,7 @@ TurnMap requests the minimum permissions currently needed for the preview build:
 - `storage` to save maps, settings, AI provider configuration, launcher position, and Float state locally.
 - `webRequest` to support full conversation extraction from ChatGPT backend requests when available.
 - Host access to supported AI chat websites and built-in AI provider API hosts.
-- Optional host access for custom OpenAI-compatible providers, requested only when the user configures a custom endpoint.
+- Optional host access for custom-site profiles, requested as one exact origin only when the user chooses Validate & Enable.
 
 See [Permission Review](docs/permissions-review.md).
 

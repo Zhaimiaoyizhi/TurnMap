@@ -18,11 +18,10 @@ import {
   toTurnsMessage
 } from "./chatgpt-observer";
 import { jumpToTurn } from "./jump-controller";
+import { capabilitiesForBuiltInSite } from "./native-capability-registry";
 import {
   attachNativeWebNavigation,
-  CHATGPT_NATIVE_CAPABILITIES,
   mergeNativeWebTurns,
-  NATIVE_WEB_DOM_CAPABILITIES,
   resolveNativeWebTarget
 } from "./native-web-navigation";
 
@@ -46,7 +45,7 @@ export const chatGptAdapter: ConversationAdapter = {
   site: {
     ...chatGptSite
   },
-  capabilities: CHATGPT_NATIVE_CAPABILITIES,
+  capabilities: capabilitiesForBuiltInSite("chatgpt"),
   detectSite: isChatGptUrl,
   getLatestTurns,
   refreshLatestTurns,
@@ -1723,7 +1722,10 @@ const webProfiles: WebConversationProfile[] = [
   }
 ];
 
-function createWebAdapter(profile: WebConversationProfile): ConversationAdapter {
+export function createWebAdapter(
+  profile: WebConversationProfile,
+  capabilities: NativeConversationCapabilities = capabilitiesForBuiltInSite(profile.site.id)
+): ConversationAdapter {
   let latestTurns: Turn[] = [];
   let latestConversationId = "";
   let observer: MutationObserver | null = null;
@@ -1769,7 +1771,7 @@ function createWebAdapter(profile: WebConversationProfile): ConversationAdapter 
 
   return {
     site: profile.site,
-    capabilities: NATIVE_WEB_DOM_CAPABILITIES,
+    capabilities,
     detectSite(url) {
       return siteMatchesUrl(profile.site, url);
     },
@@ -1820,7 +1822,7 @@ function createWebAdapter(profile: WebConversationProfile): ConversationAdapter 
   };
 }
 
-const webAdapters = webProfiles.map(createWebAdapter);
+const webAdapters = webProfiles.map((profile) => createWebAdapter(profile));
 
 export const conversationAdapters: ConversationAdapter[] = [chatGptAdapter, ...webAdapters];
 

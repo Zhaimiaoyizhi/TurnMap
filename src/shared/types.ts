@@ -59,7 +59,7 @@ export type ExtractedTurnsMessage = {
   site?: ConversationSite;
   harvestMeta?: {
     attempted: boolean;
-    source: "conversation-api" | "structured" | "web-storage" | "indexeddb" | "native-navigation" | "dom" | "deep-scan";
+    source: "conversation-api" | "structured" | "web-storage" | "indexeddb" | "native-navigation" | "dom";
     scrollContainer: string;
     scrollHeight: number;
     clientHeight: number;
@@ -104,6 +104,34 @@ export type OpenSettingsMessage = {
   type: "TURNMAP_OPEN_SETTINGS";
 };
 
+export type CustomSiteProfileDraftPayload = {
+  displayName: string;
+  origin: string;
+  pathPattern: string;
+  conversationRootSelector: string;
+  userSelector: string;
+  assistantSelector: string;
+  titleSelector?: string;
+  scrollContainerSelector?: string;
+  messageIdAttributes?: string[];
+};
+
+export type CustomSitePreviewResult = {
+  ok: boolean;
+  reason?: string;
+  title: string;
+  conversationRoots: number;
+  userMessages: number;
+  assistantMessages: number;
+  userSamples: string[];
+  assistantSamples: string[];
+};
+
+export type ValidateCustomSiteMessage = {
+  type: "TURNMAP_VALIDATE_CUSTOM_SITE";
+  profile: CustomSiteProfileDraftPayload;
+};
+
 export type JumpToTurnResult = {
   ok: boolean;
   reason?: string;
@@ -129,4 +157,5 @@ export type TurnMapMessage =
   | SyncLauncherMessage
   | OpenSidePanelMessage
   | OpenSettingsMessage
+  | ValidateCustomSiteMessage
   | FetchConversationApiMessage;

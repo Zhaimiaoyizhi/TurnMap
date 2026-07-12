@@ -2,6 +2,35 @@
 
 All notable changes to TurnMap will be documented in this file.
 
+## [0.8.4] - Evidence-Tracked Navigation And Safe Custom Sites
+
+### Added
+
+- Added a repository-backed capability and browser-evidence registry for all 13 built-in sites, with per-site redacted reports and screenshots.
+- Added selector-only custom-site profiles with exact-origin validation, bounded path globs, safe CSS selector checks, local versioned storage, active-page preview, and separate merge/replace import/export.
+- Added a dedicated bilingual Custom Sites settings workspace. Profiles are saved disabled and can be enabled only after exact-origin permission and preview succeed.
+
+### Changed
+
+- Removed the retired pre-0.8.0 smart-scroll harvest, directional SourceAnchor text search, and Reading and Jumping settings UI.
+- Renamed the visible Deep Scan action to Refresh Index so the UI no longer promises scrolling behavior. Existing internal merge semantics still insert missing middle turns without searching the page.
+- Made every built-in adapter consume its site-specific evidence record while retaining ChatGPT as the only verified native full-index/direct-jump implementation.
+- Recorded Qwen and Gemini repeated-prompt mounted-DOM smoke evidence and a GLM / Z.ai one-turn smoke result without promoting any of them to native support.
+- Updated package, extension, documentation, and capability metadata to `0.8.4`.
+
+### Fixed
+
+- Fixed streamed turns that were first mapped as `No text response` so a later completed answer can enrich the same navigation identity.
+- Fixed generated turn titles and summaries being persisted as manual overrides, which previously allowed a placeholder answer to mask later source updates.
+- Localized custom-site disabled reasons instead of exposing internal reason codes.
+
+### Verification Boundary
+
+- The unpacked build injected one TurnMap launcher on every built-in site in Chrome for Testing.
+- Qwen completed two identical prompts and TurnMap mapped two distinct nodes with both answers after the streaming fix; Gemini mapped two repeated mounted turns; GLM / Z.ai mapped one complete anonymous turn.
+- DeepSeek, Kimi, Doubao, Google AI Studio, Grok, Claude, Perplexity, Mistral, and Arena remain explicitly limited by authentication, challenge, response, or consent gates documented under `docs/qa/native-navigation/`.
+- No Cloudflare challenge was bypassed, no Arena legal terms were accepted, and no non-ChatGPT adapter is labeled native without long-conversation/off-screen evidence.
+
 ## [0.8.3] - Multi-Site Identity-First Navigation
 
 ### Added

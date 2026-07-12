@@ -2,6 +2,19 @@
 
 Date: 2026-07-11
 
+## Implementation Outcome (2026-07-12)
+
+This handoff has now been executed for the `0.8.4` local release candidate. The user's follow-up explicitly authorized direct implementation without additional requirements questions.
+
+- All non-ChatGPT built-ins use identity-first mounted-DOM extraction and exact mounted-target resolution; the retired scroll harvest and directional text-search path are removed.
+- `src/content/native-capability-registry.ts` and `docs/qa/native-navigation/` are the current capability/evidence sources of truth.
+- ChatGPT remains the only verified native full-index/direct-jump route. Qwen and Gemini have repeated-turn mounted-DOM smoke evidence; GLM / Z.ai has one-turn mounted-DOM smoke evidence. Other sites retain documented auth/access boundaries.
+- The visible Deep Scan action is now Refresh Index and never promises page scrolling.
+- Custom sites are selector-only, local, exact-origin permission-gated, preview-gated, disabled on import/edit, and backed up separately from graph JSON.
+- The 2026-07-12 browser run found and fixed streamed placeholder answers being frozen by both turn merging and persisted default node text.
+
+The sections below preserve the original handoff rationale and acceptance boundary. Where they describe the 2026-07-11 repository state, they are historical rather than current.
+
 ## Objective For The Next Conversation
 
 Extend the current ChatGPT-first extraction and direct-jump approach across every site currently declared as supported by TurnMap, then add a safe local custom-site integration path.
@@ -175,7 +188,7 @@ For each of the 13 declared sites, do not mark native/direct support complete un
 - A virtualized target shell is revived with bounded waiting when the site offers a native route.
 - When native resolution fails, the UI reports the reason and never jumps to a neighboring or merely similar turn.
 - Conversation switching clears site-local turn caches and favorite/navigation state does not leak into the next conversation.
-- Refresh, Deep Scan, floating navigation, side-panel node jump, and right-click jump remain functional.
+- Refresh, Refresh Index, floating navigation, side-panel node jump, and right-click jump remain functional.
 - The adapter has unit tests plus real-browser evidence for its declared capability tier.
 
 For custom sites:

@@ -1,9 +1,10 @@
 ﻿import type { Edge, Node, XYPosition } from "@xyflow/react";
-import type { SourceAnchor } from "../../shared/types.ts";
+import type { SourceAnchor, Turn } from "../../shared/types.ts";
 import type { AnswerExpansion } from "../ai/answer-expansion.ts";
 import { sanitizeSourceAnchors, sourceAnchorsFromNodeData } from "./source-anchors.ts";
 import { isNodeColorName, type NodeColorName } from "./graph-colors.ts";
 import type { TopicGroupRecord } from "./topic-collapse.ts";
+import { summaryFromTurn, titleFromTurn } from "./summary-behavior.ts";
 
 export type LayoutMode = "single" | "radial" | "list" | "two-sided";
 type NodeStatus = "open" | "review" | "done";
@@ -104,6 +105,21 @@ function storageKey(conversationId: string): string {
 
 function nodeStatus(value: unknown): NodeStatus | undefined {
   return value === "open" || value === "review" || value === "done" ? value : undefined;
+}
+
+function turnFromNode(node: Node): Turn | undefined {
+  const turn = node.data?.turn as Turn | undefined;
+  return turn && typeof turn.userText === "string" && typeof turn.assistantText === "string" ? turn : undefined;
+}
+
+function isGeneratedTurnTitle(node: Node): boolean {
+  const turn = turnFromNode(node);
+  return Boolean(turn && node.data?.title === titleFromTurn(turn));
+}
+
+function isGeneratedTurnSummary(node: Node): boolean {
+  const turn = turnFromNode(node);
+  return Boolean(turn && node.data?.summary === summaryFromTurn(turn));
 }
 
 function storedDimensions(value: unknown): StoredNodeDimensions | undefined {
@@ -210,12 +226,16 @@ export async function saveStoredGraph(
         title:
           node.id === "conversation-root" && isGenericConversationRootTitle(node.data?.title)
             ? undefined
+            : isGeneratedTurnTitle(node)
+              ? undefined
             : typeof node.data?.title === "string"
               ? node.data.title
               : undefined,
         summary:
           node.id === "conversation-root" && isDefaultRootSummary(node.data?.summary)
             ? undefined
+            : isGeneratedTurnSummary(node)
+              ? undefined
             : typeof node.data?.summary === "string"
               ? node.data.summary
               : undefined,

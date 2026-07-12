@@ -61,6 +61,7 @@ test("buildDebugReport redacts identifiers and excludes conversation text", () =
   assert.match(report, /Source: conversation-api/);
   assert.match(report, /Selector blocks: 2/);
   assert.match(report, /Selector turns: 1/);
+  assert.doesNotMatch(report, /Deep scan|Reading and Jumping|Scroll speed multiplier/);
   assert.doesNotMatch(report, /private user text/);
   assert.doesNotMatch(report, /private assistant text/);
 });

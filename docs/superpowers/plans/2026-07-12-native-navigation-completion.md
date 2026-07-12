@@ -18,42 +18,41 @@
 - Create: `docs/qa/native-navigation/README.md`
 - Create: `docs/qa/native-navigation/site-evidence.json`
 
-- [ ] Write failing tests that require exactly thirteen unique built-in records and prohibit verified tiers without evidence references.
-- [ ] Run the tests and confirm the registry is missing.
-- [ ] Implement the registry and JSON evidence schema.
-- [ ] Run focused tests to green.
-- [ ] Inventory real browser authentication and create one redacted report per site.
+- [x] Write failing tests that require exactly thirteen unique built-in records and prohibit verified tiers without evidence references.
+- [x] Run the tests and confirm the registry is missing.
+- [x] Implement the registry and JSON evidence schema.
+- [x] Run focused tests to green.
+- [x] Inventory real browser authentication and create one redacted report per site.
 
 ### Task 2: Native provider contract
 
 **Files:**
-- Create: `src/content/native-provider.ts`
 - Modify: `src/content/native-web-navigation.ts`
 - Modify: `src/content/conversation-adapters.ts`
 - Test: `tests/native-web-navigation.test.mjs`
 
-- [ ] Write failing tests for exact-identity provider resolution, explicit unmounted failures, and capability/evidence consistency.
-- [ ] Implement the provider contract and migrate ChatGPT plus the mounted-DOM provider without behavioral regression.
-- [ ] Add verified site-native providers only where browser evidence proves their selectors/identities.
-- [ ] Run focused and full adapter tests.
+- [x] Write failing tests for exact-identity provider resolution, explicit unmounted failures, and capability/evidence consistency.
+- [x] Use `native-web-navigation.ts` as the shared mounted-DOM provider contract and preserve the separate ChatGPT native provider without behavioral regression.
+- [x] Keep unproven sites below native; record Qwen/Gemini/GLM mounted-DOM smoke evidence without promotion.
+- [x] Run focused adapter tests; full-suite verification remains in Task 7.
 
 ### Task 3: Retire legacy scrolling/search
 
 **Files:**
 - Modify: `src/content/web-adapter-core.ts`
 - Delete: `src/content/smart-scroll-harvest.ts`
-- Delete: `src/content/scroll-container.ts`
+- Keep: `src/content/scroll-container.ts` for bounded direct ChatGPT reveal only; it is not an extraction/search route.
 - Modify: `src/side-panel/App.tsx`
 - Modify: `src/settings-page/main.tsx`
 - Modify: `src/side-panel/i18n/i18n-storage.ts`
 - Modify: `tests/conversation-adapters.test.mjs`
 - Modify: `tests/reading-settings.test.mjs`
 
-- [ ] Write failing source-boundary tests that prohibit smart harvest, directional search, and retired UI copy.
-- [ ] Delete inactive scrolling and SourceAnchor-search functions and imports.
-- [ ] Replace Deep Scan with capability-aware Refresh Index behavior and copy.
-- [ ] Remove obsolete settings UI while preserving safe reads of historical stored settings.
-- [ ] Run unit and type checks.
+- [x] Write failing source-boundary tests that prohibit smart harvest, directional search, and retired UI copy.
+- [x] Delete inactive scrolling and SourceAnchor-search functions and imports.
+- [x] Replace Deep Scan with capability-aware Refresh Index behavior and copy.
+- [x] Remove obsolete settings UI/code; historical storage keys are ignored rather than reused.
+- [x] Run focused unit and type checks.
 
 ### Task 4: Custom profile model and backup
 
@@ -61,9 +60,9 @@
 - Create: `src/shared/custom-site-profiles.ts`
 - Create: `tests/custom-site-profiles.test.mjs`
 
-- [ ] Write failing tests for exact-origin validation, selector safety, built-in-origin protection, normalization, enabled/disabled state, and separate import/export.
-- [ ] Implement schema version 1, validation, storage, and deterministic merge/replace import.
-- [ ] Run focused tests to green.
+- [x] Write failing tests for exact-origin validation, selector safety, built-in-origin protection, normalization, enabled/disabled state, and separate import/export.
+- [x] Implement schema version 1, validation, storage, and deterministic merge/replace import.
+- [x] Run focused tests to green.
 
 ### Task 5: Custom adapter and preview bridge
 
@@ -75,10 +74,10 @@
 - Create: `src/content/custom-site-adapter.ts`
 - Test: `tests/custom-site-adapter.test.mjs`
 
-- [ ] Write failing tests for asynchronous custom adapter selection and fixed preview messages.
-- [ ] Implement custom profile loading, exact-origin matching, non-scrolling extraction, identity-first mounted jump, and actionable preview results.
-- [ ] Ensure built-in adapters always win and disabled profiles never activate.
-- [ ] Run focused and full messaging/adapter tests.
+- [x] Write failing tests for asynchronous custom adapter selection and fixed preview messages.
+- [x] Implement custom profile loading, exact-origin matching, non-scrolling extraction, identity-first mounted jump, and actionable preview results.
+- [x] Ensure built-in adapters always win and disabled profiles never activate.
+- [x] Run focused messaging/adapter tests; full-suite verification remains in Task 7.
 
 ### Task 6: Settings UI and permissions
 
@@ -89,10 +88,10 @@
 - Modify: `src/side-panel/i18n/i18n-storage.ts`
 - Test: `tests/custom-site-settings.test.mjs`
 
-- [ ] Write failing UI/source tests for add, edit, permission request, preview, disabled reason, delete, import, and export controls.
-- [ ] Implement the panel with fixed validation flow and exact-origin permission requests.
-- [ ] Add bilingual copy and theme-safe styles.
-- [ ] Run focused tests and build.
+- [x] Write failing UI/source tests for add, edit, permission request, preview, disabled reason, delete, import, and export controls.
+- [x] Implement the panel with fixed validation flow and exact-origin permission requests.
+- [x] Add bilingual copy and theme-safe styles.
+- [x] Run focused tests and build, including a real settings-page browser smoke test.
 
 ### Task 7: Documentation and release
 
@@ -108,9 +107,8 @@
 - Modify: `public/manifest.json`
 - Modify: `src/manifest.ts`
 
-- [ ] Generate the capability tables from the evidence registry and document blocked/unverified sites honestly.
-- [ ] Document custom-site setup, optional permissions, local storage, backup, and limitations.
-- [ ] Update changelog continuously and bump all metadata to 0.8.4 after implementation is stable.
-- [ ] Run full tests, typecheck, build, and package.
-- [ ] Inspect the ZIP manifest and contents, create local commits, and preserve the release artifact.
-
+- [x] Align capability tables with the evidence registry and document blocked/unverified sites honestly.
+- [x] Document custom-site setup, optional permissions, local storage, backup, and limitations.
+- [x] Update changelog continuously and bump all metadata to 0.8.4 after implementation is stable.
+- [x] Run full tests, typecheck, build, and package.
+- [x] Inspect the ZIP manifest and contents, create the local commit, and preserve the release artifact.

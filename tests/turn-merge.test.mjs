@@ -34,6 +34,31 @@ test("refresh appends only tail turns and preserves existing turn objects", () =
   assert.equal(result.turns[0].assistantText, "old text");
 });
 
+test("refresh enriches a streamed placeholder when the same identity later has an answer", () => {
+  const pending = turn("turn-2", 1, "No text response");
+  const completed = turn("turn-2", 1, "TurnMap QA 1");
+
+  const result = mergeTurnUpdates([pending], [completed], "refresh");
+
+  assert.equal(result.added, 0);
+  assert.equal(result.turns.length, 1);
+  assert.equal(result.turns[0].assistantText, "TurnMap QA 1");
+  assert.equal(result.turns[0], completed);
+});
+
+test("refresh index enriches a streamed placeholder without replacing completed neighbors", () => {
+  const first = turn("turn-1", 0, "keep this answer");
+  const pending = turn("turn-2", 1, "No text response");
+  const changedFirst = turn("turn-1", 0, "do not overwrite");
+  const completed = turn("turn-2", 1, "TurnMap QA 1");
+
+  const result = mergeTurnUpdates([first, pending], [changedFirst, completed], "refresh-index");
+
+  assert.equal(result.added, 0);
+  assert.equal(result.turns[0], first);
+  assert.equal(result.turns[1], completed);
+});
+
 test("refresh ignores missing middle turns", () => {
   const first = turn("turn-1", 0);
   const third = turn("turn-3", 2);
@@ -45,14 +70,14 @@ test("refresh ignores missing middle turns", () => {
   assert.deepEqual(result.turns.map((entry) => entry.id), ["turn-1", "turn-3"]);
 });
 
-test("deep scan inserts missing middle turns without replacing existing text", () => {
+test("refresh index inserts missing middle turns without replacing existing text", () => {
   const first = turn("turn-1", 0, "old text");
   const fourth = turn("turn-4", 3);
   const changedFirst = turn("turn-1", 0, "new scan should not overwrite");
   const second = turn("turn-2", 1);
   const third = turn("turn-3", 2);
 
-  const result = mergeTurnUpdates([first, fourth], [changedFirst, second, third, fourth], "deep-scan");
+  const result = mergeTurnUpdates([first, fourth], [changedFirst, second, third, fourth], "refresh-index");
 
   assert.equal(result.added, 2);
   assert.deepEqual(result.turns.map((entry) => entry.id), ["turn-1", "turn-2", "turn-3", "turn-4"]);
@@ -60,12 +85,12 @@ test("deep scan inserts missing middle turns without replacing existing text", (
   assert.equal(result.turns[0].assistantText, "old text");
 });
 
-test("deep scan preserves old turns that are absent from the scan", () => {
+test("refresh index preserves old turns that are absent from the mounted refresh", () => {
   const first = turn("turn-1", 0);
   const second = turn("turn-2", 1);
   const third = turn("turn-3", 2);
 
-  const result = mergeTurnUpdates([first, third], [first, second], "deep-scan");
+  const result = mergeTurnUpdates([first, third], [first, second], "refresh-index");
 
   assert.equal(result.added, 1);
   assert.deepEqual(result.turns.map((entry) => entry.id), ["turn-1", "turn-2", "turn-3"]);

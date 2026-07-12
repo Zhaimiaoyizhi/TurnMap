@@ -1,15 +1,15 @@
 ﻿# TurnMap User Guide
 
-TurnMap turns the current ChatGPT conversation into an editable map.
+TurnMap turns the current conversation on a supported AI site into an editable map.
 
 ## Opening TurnMap
 
 Current views:
 
-- Side Panel: compact map beside ChatGPT.
-- Full Page: larger map view connected to the source ChatGPT tab.
-- Float: compact in-page navigator on ChatGPT.
-- ChatGPT Floating Launcher: right-side launcher on ChatGPT pages.
+- Side Panel: compact map beside the supported AI page.
+- Full Page: larger map view connected to the source conversation tab.
+- Float: compact in-page navigator on supported sites.
+- Floating Launcher: right-side launcher on supported sites and validated custom sites.
 
 Launcher behavior:
 
@@ -27,10 +27,22 @@ TurnMap has a dedicated settings page for global settings:
 - Float default state.
 - ChatGPT launcher visibility.
 - Update notice preferences.
+- Selector-only custom-site profiles, exact-origin validation, and separate profile import/export.
 
 ## Refreshing A Conversation
 
-Use Refresh to read the current ChatGPT conversation. TurnMap tries several extraction methods and falls back to deep scanning when needed.
+Use Refresh to read the current conversation index. ChatGPT uses its verified native index route. Other built-in and custom adapters read only currently mounted turns. Refresh Index can insert missing mounted turns, but it does not scroll the page or search for matching text. An unmounted jump fails explicitly.
+
+## Custom Sites
+
+Open Settings > Custom Sites to add a site that is not built in:
+
+1. Enter an exact `http` or `https` origin, a bounded path pattern, one conversation-root selector, user/assistant message selectors, and optional title/scroll-container selectors.
+2. Save the profile. New and edited profiles remain disabled.
+3. Open the matching site in the active tab and choose Validate & Enable. TurnMap requests only that exact origin and previews bounded message counts/samples.
+4. If permission is denied, the page does not match, or preview fails, the profile stays disabled.
+
+Custom sites never override built-in adapters, cannot run scripts, and use the same mounted-only exact-identity jump boundary. Their JSON backup is separate from TurnMap graph JSON; imported profiles must be validated again.
 
 ## Editing The Map
 

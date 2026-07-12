@@ -1,6 +1,5 @@
 ﻿import type { ExtractedTurnsMessage } from "../shared/types";
 import type { ApiTaskLogEntry } from "./task-log";
-import type { ReadingBehaviorSettings } from "../shared/reading-settings.ts";
 
 type DebugReportInput = {
   conversationTitle: string;
@@ -13,7 +12,6 @@ type DebugReportInput = {
   extensionVersion?: string;
   generatedAt?: string;
   taskLog?: ApiTaskLogEntry[];
-  readingBehavior?: ReadingBehaviorSettings;
 };
 
 function redactConversationId(id: string): string {
@@ -45,22 +43,13 @@ export function buildDebugReport(input: DebugReportInput): string {
     "",
     `Source: ${meta?.source ?? "unknown"}`,
     `Attempted non-DOM source: ${meta?.attempted ?? "unknown"}`,
-    `Deep scan steps: ${meta?.scannedSteps ?? 0}`,
-    `Scroll container: ${meta?.scrollContainer ?? "n/a"}`,
-    `Scroll height: ${meta?.scrollHeight ?? 0}`,
-    `Client height: ${meta?.clientHeight ?? 0}`,
+    "Index behavior: non-scrolling identity-first refresh",
     `Selector blocks: ${diagnostics?.selectorBlocks ?? "n/a"}`,
     `Selector turns: ${diagnostics?.selectorTurns ?? "n/a"}`,
     `Fallback selector candidates: ${diagnostics?.fallbackSelectorCandidates ?? "n/a"}`,
     `Fallback text candidates: ${diagnostics?.fallbackTextCandidates ?? "n/a"}`,
     `Fallback blocks: ${diagnostics?.fallbackBlocks ?? "n/a"}`,
     `Fallback turns: ${diagnostics?.fallbackTurns ?? "n/a"}`,
-    "",
-    "## Reading and Jumping",
-    "",
-    `Scroll speed multiplier: ${input.readingBehavior?.scrollSpeedMultiplier ?? "n/a"}x`,
-    `Edge wait time: ${input.readingBehavior?.edgeWaitSeconds ?? "n/a"}s`,
-    `Jump search strength: ${input.readingBehavior?.jumpSearchStrength ?? "n/a"}x`,
     "",
     "## Browser",
     "",

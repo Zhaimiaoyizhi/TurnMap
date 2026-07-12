@@ -316,15 +316,14 @@ test("default node size refreshes are idempotent to avoid graph reload loops", a
   assert.doesNotMatch(canvasSource, /setNodeSizeSettings\(activeNodeSizeSettings\);/);
 });
 
-test("reading and jumping settings are localized and wired to content scripts", async () => {
+test("retired scrolling and fallback-search settings are absent from active UI and content code", async () => {
   const settingsSource = await readFile(new URL("../src/settings-page/main.tsx", import.meta.url), "utf8");
-  const storageSource = await readFile(new URL("../src/shared/reading-settings.ts", import.meta.url), "utf8");
-  const contentStorageSource = await readFile(new URL("../src/content/reading-settings.ts", import.meta.url), "utf8");
-  const smartScrollSource = await readFile(new URL("../src/content/smart-scroll-harvest.ts", import.meta.url), "utf8");
   const jumpSource = await readFile(new URL("../src/content/jump-controller.ts", import.meta.url), "utf8");
   const webAdapterSource = await readFile(new URL("../src/content/web-adapter-core.ts", import.meta.url), "utf8");
-  const debugReportSource = await readFile(new URL("../src/side-panel/debug-report.ts", import.meta.url), "utf8");
   const i18nSource = await readFile(new URL("../src/side-panel/i18n/i18n-storage.ts", import.meta.url), "utf8");
+  const appSource = await readFile(new URL("../src/side-panel/App.tsx", import.meta.url), "utf8");
+  const debugReportSource = await readFile(new URL("../src/side-panel/debug-report.ts", import.meta.url), "utf8");
+  const turnMergeSource = await readFile(new URL("../src/side-panel/turn-merge.ts", import.meta.url), "utf8");
 
   for (const key of [
     "settings.readingJumping",
@@ -339,28 +338,21 @@ test("reading and jumping settings are localized and wired to content scripts", 
     "settings.saveReadingJumping",
     "settings.loadingReadingJumping"
   ]) {
-    assert.match(i18nSource, new RegExp(`"${key}":`));
-    assert.match(settingsSource, new RegExp(key.replaceAll(".", "\\.")));
+    assert.doesNotMatch(settingsSource, new RegExp(key.replaceAll(".", "\\.")));
+    assert.doesNotMatch(i18nSource, new RegExp(`"${key.replaceAll(".", "\\.")}":`));
   }
 
-  assert.match(settingsSource, /function edgeWaitSecondsToSliderValue/);
-  assert.match(settingsSource, /function edgeWaitSliderValueToSeconds/);
-  assert.match(settingsSource, /NumericSliderSetting/);
-  assert.match(settingsSource, /READING_BEHAVIOR_DEFAULTS/);
-  assert.match(storageSource, /scrollSpeedMultiplier:\s*1/);
-  assert.match(storageSource, /edgeWaitSeconds:\s*0\.8/);
-  assert.match(storageSource, /jumpSearchStrength:\s*1/);
-  assert.match(contentStorageSource, /turnmap\.reading\.scrollSpeedMultiplier/);
-  assert.doesNotMatch(smartScrollSource, /\.\.\/shared\/reading-settings/);
-  assert.match(smartScrollSource, /settings\?\.scrollSpeedMultiplier/);
-  assert.match(smartScrollSource, /settings\?\.edgeWaitSeconds/);
+  assert.doesNotMatch(settingsSource, /edgeWaitSecondsToSliderValue|edgeWaitSliderValueToSeconds/);
+  assert.doesNotMatch(settingsSource, /READING_BEHAVIOR_DEFAULTS|normalizeJumpSearchStrength|normalizeScrollSpeedMultiplier/);
   assert.doesNotMatch(jumpSource, /loadReadingBehaviorSettings/);
   assert.doesNotMatch(jumpSource, /settings\.jumpSearchStrength/);
   assert.match(jumpSource, /resolveChatGptOphelTarget/);
-  assert.match(webAdapterSource, /loadReadingBehaviorSettings/);
-  assert.match(debugReportSource, /Scroll speed multiplier/);
-  assert.match(debugReportSource, /Edge wait time/);
-  assert.match(debugReportSource, /Jump search strength/);
+  assert.doesNotMatch(webAdapterSource, /loadReadingBehaviorSettings|smartHarvestByScrolling|scrollToWebTurn/);
+  assert.match(i18nSource, /"app\.action\.refreshIndex":/);
+  assert.doesNotMatch(i18nSource, /"app\.action\.deepScan":/);
+  assert.doesNotMatch(appSource, /loadReadingBehaviorSettings|readingBehavior|"deep-scan"/);
+  assert.doesNotMatch(debugReportSource, /Reading and Jumping|Deep scan steps|Scroll speed multiplier|readingBehavior/);
+  assert.doesNotMatch(turnMergeSource, /"deep-scan"/);
 });
 
 test("collapsed node action writes compact automatic dimensions", async () => {

@@ -17,6 +17,7 @@ TurnMap stores map data in the browser's extension storage:
 - Floating panel preferences
 - Floating launcher position and visibility preferences
 - Planned update notice preferences, such as ignored versions or reminder choices
+- Selector-only custom-site profiles, including exact origin, path pattern, CSS selectors, enabled state, and validation reason
 
 This data stays in the local browser profile unless the user exports it or uses AI features.
 
@@ -53,13 +54,15 @@ TurnMap reads the active supported AI conversation page to build the current con
 
 The floating launcher runs only on supported AI conversation pages. It provides a quick way to open TurnMap or TurnMap settings and stores its visibility and position preferences locally.
 
+Custom-site profiles are declarative and stored locally. TurnMap rejects scripts, executable selectors, wildcard origins, and built-in-site overrides. A profile stays disabled until the user grants its exact origin and an active-page preview succeeds. Preview returns only bounded counts and short text samples to the settings page; TurnMap does not send this data to an AI provider.
+
 ## Update Notices
 
 The planned Update Notice may check a GitHub Release page or a version manifest to determine whether a newer TurnMap version is available. This check should not include conversation text, API keys, or ChatGPT session data.
 
 ## Exports
 
-Users can export maps as JSON, Markdown, OPML, Obsidian Canvas, Obsidian vault Markdown, SVG, or PNG. Users can also export custom UI language packs as JSON for local backup or community sharing. Exported files are controlled by the user.
+Users can export maps as JSON, Markdown, OPML, Obsidian Canvas, Obsidian vault Markdown, SVG, or PNG. Users can also export custom UI language packs and custom-site profiles as separate JSON backups. Imported custom-site profiles remain disabled until validated again. Exported files are controlled by the user.
 
 ## Permissions
 
@@ -70,4 +73,4 @@ TurnMap requests:
 - `storage` to persist maps and settings locally.
 - `webRequest` to support reliable ChatGPT conversation API extraction.
 - Host access to supported AI conversation sites and built-in AI provider API hosts.
-- Optional host access for custom AI endpoints, requested only when needed.
+- Optional host access for custom AI endpoints or selector-only custom sites, requested as an exact origin only when needed.

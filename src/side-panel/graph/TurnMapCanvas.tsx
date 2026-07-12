@@ -111,7 +111,7 @@ type TurnMapCanvasProps = {
   conversationId: string;
   conversationTitle: string;
   turns: Turn[];
-  turnUpdateMode?: "replace" | "refresh" | "deep-scan";
+  turnUpdateMode?: "replace" | "refresh" | "refresh-index";
   sourceTabId?: number;
   rebuildRequest?: number;
   onStatus?: (status: string) => void;
@@ -3066,7 +3066,7 @@ export function TurnMapCanvas({
           ? remapRecordKeys(storedGraph.positions, storedTurnIdMap)
           : {};
       const activePositions =
-        !shouldRebuild && turnUpdateMode === "deep-scan"
+        !shouldRebuild && turnUpdateMode === "refresh-index"
           ? deepScanInsertedPositions(turns, storedPositions, activeLayout)
           : storedPositions;
       const storedCustomNodes = shouldRebuild ? [] : (storedGraph?.customNodes ?? []);

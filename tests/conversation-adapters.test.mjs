@@ -202,7 +202,8 @@ test("messaging requests current site access when dynamic content injection fail
   const source = readFileSync(new URL("../src/shared/messaging.ts", import.meta.url), "utf8");
 
   assert.match(source, /async function requestHostAccess/);
-  assert.match(source, /chrome\.permissions\.request\(\{ origins: \[origin\] \}\)/);
+  assert.match(source, /return requestExactHostAccess\(origin\)/);
+  assert.match(source, /chrome\.permissions\.request\(\{ origins: \[permissionPattern\] \}\)/);
   assert.match(source, /const granted = await requestHostAccess\(tabUrl\)/);
   assert.match(source, /await chrome\.tabs\.get\(tabId\)/);
 });
@@ -227,11 +228,13 @@ test("launcher uses the packaged TurnMap plugin icon", () => {
   assert.doesNotMatch(source, /launcherButton\.innerHTML\s*=/);
 });
 
-test("all built-in adapters declare identity-first navigation capabilities", () => {
+test("all built-in adapters derive navigation capabilities from the evidence registry", () => {
   const source = readFileSync(new URL("../src/content/conversation-adapters.ts", import.meta.url), "utf8");
 
-  assert.match(source, /capabilities:\s*CHATGPT_NATIVE_CAPABILITIES/);
-  assert.match(source, /capabilities:\s*NATIVE_WEB_DOM_CAPABILITIES/);
+  assert.match(source, /capabilitiesForBuiltInSite\("chatgpt"\)/);
+  assert.match(source, /capabilitiesForBuiltInSite\(profile\.site\.id\)/);
+  assert.doesNotMatch(source, /capabilities:\s*CHATGPT_NATIVE_CAPABILITIES/);
+  assert.doesNotMatch(source, /capabilities:\s*NATIVE_WEB_DOM_CAPABILITIES/);
 });
 
 test("non-ChatGPT adapters do not call legacy scrolling extraction or source-anchor jump search", () => {
@@ -612,44 +615,38 @@ test("Kimi fixture: single user without assistant creates No text response fallb
   assert.equal(turns[0].assistantText, "No text response");
 });
 
-test("web jump lookup does not fall back to visible block index for virtualized chats", () => {
+test("generic web core contains no retired scrolling or SourceAnchor search jump route", () => {
   const source = readFileSync(new URL("../src/content/web-adapter-core.ts", import.meta.url), "utf8");
 
-  assert.doesNotMatch(source, /userBlocks\[anchor\.turnIndex\]/);
-  assert.doesNotMatch(source, /collapseRepeatedWebText/);
-  assert.doesNotMatch(source, /isDuplicateUserCandidate|preferredUserCandidate/);
-  assert.match(source, /export async function scrollToWebTurn/);
-  assert.match(source, /getWebChatScrollCandidates/);
+  assert.doesNotMatch(source, /harvestWebTurnsByScrolling/);
+  assert.doesNotMatch(source, /smartHarvestByScrolling/);
+  assert.doesNotMatch(source, /scrollToWebTurn/);
+  assert.doesNotMatch(source, /findWebTurnElement/);
+  assert.doesNotMatch(source, /getWebSearchDirection|searchWebTurnInDirection/);
+  assert.doesNotMatch(source, /loadReadingBehaviorSettings/);
 });
 
-test("web jump lookup does not trust repeated generic DOM ids before text matching", () => {
+test("web extraction identity never treats repeated data-testid values as native message ids", () => {
   const source = readFileSync(new URL("../src/content/web-adapter-core.ts", import.meta.url), "utf8");
-  const lookupStart = source.indexOf("export function findWebTurnElement");
-  const lookupEnd = source.indexOf("function revealWebTurnElement", lookupStart);
-  const lookup = source.slice(lookupStart, lookupEnd);
+  const identityStart = source.indexOf("function elementId");
+  const identityEnd = source.indexOf("function elementIsVisible", identityStart);
+  const identity = source.slice(identityStart, identityEnd);
 
-  assert.doesNotMatch(lookup, /block\.elementId === anchor\.userMessageId\) return/);
-  assert.match(lookup, /const textHash = hashText\(rawText\);/);
-  assert.match(lookup, /textMatches/);
-  assert.match(lookup, /idLooksUnique/);
+  assert.match(identity, /data-message-id/);
+  assert.match(identity, /data-turn-id/);
+  assert.doesNotMatch(identity, /data-testid/);
 });
 
-test("web jump reveals turns with direct container centering and stable highlight", () => {
+test("web native jump reveal only centers an already resolved exact element", () => {
   const source = readFileSync(new URL("../src/content/web-adapter-core.ts", import.meta.url), "utf8");
-  const jumpStart = source.indexOf("export async function scrollToWebTurn");
-  const jumpBody = source.slice(jumpStart);
+  const revealStart = source.indexOf("export function revealWebTurnElement");
+  const revealBody = source.slice(revealStart);
 
   assert.match(source, /WEB_HIGHLIGHT_CLASS = "turnmap-source-highlight"/);
   assert.match(source, /function scrollElementToCenter\(element: HTMLElement, scrollElement: HTMLElement\)/);
-  assert.match(source, /function revealWebTurnElement\(element: HTMLElement, scrollElement\?: HTMLElement\)/);
-  assert.match(source, /function getWebSearchDirection/);
-  assert.match(source, /function searchWebTurnInDirection/);
-  assert.match(source, /element\.classList\.add\(WEB_HIGHLIGHT_CLASS\)/);
-  assert.match(jumpBody, /const originalTop = scrollElement\.scrollTop;/);
-  assert.match(jumpBody, /const direction = getWebSearchDirection/);
-  assert.match(jumpBody, /scrollElement\.scrollTo\(\{ top: originalTop, behavior: "instant" \}\);/);
-  assert.doesNotMatch(jumpBody, /scrollElement\.scrollTo\(\{ top: 0, behavior: "instant" \}\);/);
-  assert.doesNotMatch(source, /scrollIntoView\(\{ behavior: "smooth", block: "center" \}\)/);
+  assert.match(source, /export function revealWebTurnElement\(element: HTMLElement, scrollElement\?: HTMLElement\)/);
+  assert.match(revealBody, /element\.classList\.add\(WEB_HIGHLIGHT_CLASS\)/);
+  assert.doesNotMatch(revealBody, /for \(|while \(|userPreview|textHash/);
 });
 
 test("ChatGPT jump direction can use visible user-only markers before scroll-ratio fallback", () => {
@@ -677,7 +674,7 @@ test("ChatGPT jump direction can use visible user-only markers before scroll-rat
   assert.match(lookup, /markerMatchesAnchor\(marker, anchor\)/);
 });
 
-test("legacy lazy jump search remains only in generic web adapters", () => {
+test("legacy lazy jump search is absent from ChatGPT and generic web adapters", () => {
   const chatGptJump = readFileSync(new URL("../src/content/jump-controller.ts", import.meta.url), "utf8");
   const webAdapter = readFileSync(new URL("../src/content/web-adapter-core.ts", import.meta.url), "utf8");
 
@@ -685,9 +682,9 @@ test("legacy lazy jump search remains only in generic web adapters", () => {
   assert.doesNotMatch(chatGptJump, /function jumpSearchStepLimit/);
   assert.doesNotMatch(chatGptJump, /findTurnElementWithLazyScroll/);
 
-  assert.match(webAdapter, /function webJumpSearchDelta/);
-  assert.match(webAdapter, /function webJumpSearchStepLimit/);
-  assert.doesNotMatch(webAdapter, /clientHeight \* 0\.75, 480/);
+  assert.doesNotMatch(webAdapter, /function webJumpSearchDelta/);
+  assert.doesNotMatch(webAdapter, /function webJumpSearchStepLimit/);
+  assert.doesNotMatch(webAdapter, /searchWebTurnInDirection|scrollToWebTurn/);
 });
 
 test("ChatGPT extractor combines multiple markdown blocks from one assistant message", () => {

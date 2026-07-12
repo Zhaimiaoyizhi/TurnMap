@@ -1,6 +1,5 @@
 ﻿import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ExtractedTurnsMessage, Turn } from "../shared/types";
-import { loadReadingBehaviorSettings } from "../shared/reading-settings.ts";
 import { useRef } from "react";
 import { isTurnMapMessage, requestTurnsFromActiveTab, setFloatingPanelInTab } from "../shared/messaging";
 import { Icon } from "./components/Icon";
@@ -97,23 +96,20 @@ export function App({ mode = "side-panel" }: AppProps) {
       );
       return;
     }
-    if (mode === "deep-scan") {
+    if (mode === "refresh-index") {
       setStatus(
         merged.added > 0
-          ? t("app.status.deepScanAdded", {
+          ? t("app.status.refreshIndexAdded", {
               added: merged.added,
-              total: merged.turns.length,
-              steps: meta?.scannedSteps ?? 0
+              total: merged.turns.length
             })
-          : t("app.status.deepScanNoNew", { total: merged.turns.length, steps: meta?.scannedSteps ?? 0 })
+          : t("app.status.refreshIndexNoNew", { total: merged.turns.length })
       );
       return;
     }
     setStatus(
       meta
-        ? meta.source === "deep-scan"
-          ? t("app.status.mappedDeepScan", { count: merged.turns.length, steps: meta.scannedSteps })
-          : t("app.status.mappedVia", { count: merged.turns.length, source: meta.source })
+        ? t("app.status.mappedVia", { count: merged.turns.length, source: meta.source })
         : t("app.status.loadedTurns", { count: merged.turns.length })
     );
   }, [t]);
@@ -147,7 +143,7 @@ export function App({ mode = "side-panel" }: AppProps) {
   );
 
   const applyConversationRead = useCallback(
-    async (message: ExtractedTurnsMessage, mode: "refresh" | "deep-scan"): Promise<boolean> => {
+    async (message: ExtractedTurnsMessage, mode: "refresh" | "refresh-index"): Promise<boolean> => {
       if (message.site?.id === "unsupported") {
         applyTurnsMessage(message, mode);
         return false;
@@ -164,7 +160,7 @@ export function App({ mode = "side-panel" }: AppProps) {
         return true;
       }
 
-      if (mode === "deep-scan") {
+      if (mode === "refresh-index") {
         if (message.turns.length === 0) {
           setStatus(t("app.status.switchReadFailed"));
           return false;
@@ -174,7 +170,7 @@ export function App({ mode = "side-panel" }: AppProps) {
         return true;
       }
 
-      setStatus(t("app.status.switchDeepScanning"));
+      setStatus(t("app.status.switchReadingIndex"));
       const scanned = await requestTurnsFromActiveTab({ harvest: true, tabId: sourceTabId });
       if (scanned?.type === "TURNMAP_TURNS_UPDATED" && scanned.turns.length > 0) {
         applyTurnsMessage(scanned, "replace");
@@ -212,13 +208,13 @@ export function App({ mode = "side-panel" }: AppProps) {
     }
   }, [applyTurnsMessage, sourceTabId, t]);
 
-  const deepScanTurns = useCallback(async () => {
-    setStatus(t("app.status.deepScanning"));
+  const refreshIndexTurns = useCallback(async () => {
+    setStatus(t("app.status.refreshingIndex"));
     const message = await requestTurnsFromActiveTab({ harvest: true, tabId: sourceTabId });
     if (message?.type === "TURNMAP_TURNS_UPDATED") {
-      await applyConversationRead(message, "deep-scan");
+      await applyConversationRead(message, "refresh-index");
     } else {
-      setStatus(t("app.status.deepScanFailed"));
+      setStatus(t("app.status.refreshIndexFailed"));
     }
   }, [applyConversationRead, sourceTabId, t]);
 
@@ -253,7 +249,6 @@ export function App({ mode = "side-panel" }: AppProps) {
   }, []);
 
   const exportDebugReport = useCallback(async () => {
-    const readingBehavior = await loadReadingBehaviorSettings();
     const report = buildDebugReport({
       conversationTitle,
       conversationId,
@@ -263,8 +258,7 @@ export function App({ mode = "side-panel" }: AppProps) {
       status,
       userAgent: navigator.userAgent,
       extensionVersion: chrome.runtime.getManifest().version,
-      taskLog,
-      readingBehavior
+      taskLog
     });
     const filename = `${safeFilePart(conversationTitle)}.turnmap-debug.md`;
     downloadTextFile(filename, report, "text/markdown;charset=utf-8");
@@ -390,9 +384,9 @@ export function App({ mode = "side-panel" }: AppProps) {
             <Icon name="refresh" />
             <span>{t("app.action.refresh")}</span>
           </button>
-          <button className="button-with-icon" type="button" onClick={deepScanTurns}>
+          <button className="button-with-icon" type="button" onClick={refreshIndexTurns}>
             <Icon name="scan" />
-            <span>{t("app.action.deepScan")}</span>
+            <span>{t("app.action.refreshIndex")}</span>
           </button>
           <button className="button-with-icon" type="button" onClick={rebuildMap}>
             <Icon name="rebuild" />
@@ -455,8 +449,8 @@ export function App({ mode = "side-panel" }: AppProps) {
               [t("debug.id"), conversationId],
               [t("debug.turns"), String(turns.length)],
               [t("debug.source"), lastMessage?.harvestMeta?.source ?? "unknown"],
-              [t("debug.steps"), String(lastMessage?.harvestMeta?.scannedSteps ?? 0)],
-              [t("debug.scroll"), lastMessage?.harvestMeta?.scrollContainer ?? "n/a"],
+              [t("debug.selectorTurns"), String(lastMessage?.harvestMeta?.diagnostics?.selectorTurns ?? 0)],
+              [t("debug.fallbackTurns"), String(lastMessage?.harvestMeta?.diagnostics?.fallbackTurns ?? 0)],
               [t("debug.apiTasks"), String(taskLog.length)]
             ].map(([label, value]) => (
               <div className="debug-panel__item" key={label}>
