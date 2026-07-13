@@ -2,6 +2,23 @@
 
 All notable changes to TurnMap will be documented in this file.
 
+## [Unreleased] - Grok Silent Native Index
+
+### Added
+
+- Added a clean-room Grok native response index that passively observes the site's existing conversation response stream at `document_start`, pairs human and assistant responses by `parentResponseId`, and assigns stable origin/conversation/response identities without scrolling the page.
+
+### Changed
+
+- Grok now prefers structured `responseId`, `sender`, `message`, and `parentResponseId` data over mounted-DOM text. Assistant-side prompt echo fields and repeated nested response objects do not create duplicate turns, while longer streamed answers enrich the same navigation identity.
+- Grok direct navigation reveals only an exact mounted backend response ID. A missing or mismatched target fails explicitly without selecting a neighboring response, text matching, or scroll search.
+- `grok.com` and `x.com` native caches are origin-scoped. The X Grok shell retains safe mounted-DOM fallback because anonymous browser evidence reached the X login flow and did not prove protocol compatibility with `grok.com`.
+
+### Verification Boundary
+
+- Synthetic prompt-echo, repeated-text identity, nested-response deduplication, streaming enrichment, origin isolation, exact-target, wrong-ID, safe-failure, adapter-routing, and eager passive-capture coverage is recorded in `tests/grok-native-navigation.test.mjs`.
+- The current public `grok.com` page and production bundles confirmed `/c/:conversationId`, `GET/POST /rest/app-chat/conversations/:conversationId/responses`, and the `responseId` / `sender` / `message` / `parentResponseId` response graph. Authenticated long-conversation and off-screen acceptance remains unavailable, so Grok stays `blocked-auth` at the mounted-DOM capability tier.
+
 ## [Unreleased] - Qwen Silent Native Index
 
 ### Added

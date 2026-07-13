@@ -53,6 +53,13 @@ import {
   startQwenNativeObserver
 } from "./qwen-native-navigation";
 import {
+  findMountedGrokResponseElement,
+  grokConversationContextFromUrl,
+  grokNativeIndex,
+  navigateGrokTarget,
+  startGrokNativeObserver
+} from "./grok-native-navigation";
+import {
   bindClaudeNativeTurns,
   claudeConversationIdFromUrl,
   claudeNativeIndex,
@@ -2152,6 +2159,112 @@ function createDoubaoAdapter(
   };
 }
 
+function createGrokAdapter(
+  profile: WebConversationProfile,
+  capabilities: NativeConversationCapabilities = capabilitiesForBuiltInSite("grok")
+): ConversationAdapter {
+  let latestTurns: Turn[] = [];
+  let latestConversationKey = "";
+  let observer: MutationObserver | null = null;
+  let debounceTimer: number | null = null;
+  let lastHarvestMeta: HarvestMeta | undefined;
+
+  const resetCacheForConversation = () => {
+    const context = grokConversationContextFromUrl(window.location.href);
+    grokNativeIndex.activate(context.origin, context.conversationId);
+    const conversationKey = `${context.origin}|${context.conversationId}|${getWebConversationId(profile)}`;
+    if (conversationKey !== latestConversationKey) {
+      latestConversationKey = conversationKey;
+      latestTurns = [];
+      lastHarvestMeta = undefined;
+    }
+  };
+
+  const readMountedTurns = () => attachNativeWebNavigation(extractTurnsFromDocument(profile), profile.site.id);
+  const readCurrentTurns = () => {
+    const nativeTurns = grokNativeIndex.getActiveTurns();
+    return nativeTurns.length > 0 ? nativeTurns : readMountedTurns();
+  };
+
+  const refresh = async () => {
+    resetCacheForConversation();
+    latestTurns = mergeNativeWebTurns(latestTurns, readCurrentTurns());
+    lastHarvestMeta = {
+      attempted: false,
+      source: grokNativeIndex.getActiveTurns().length > 0 ? "conversation-api" : "native-navigation",
+      scrollContainer: "document",
+      scrollHeight: document.documentElement.scrollHeight,
+      clientHeight: document.documentElement.clientHeight,
+      scannedSteps: 0,
+      diagnostics: getLastWebExtractionDiagnostics(profile)
+    };
+    return latestTurns;
+  };
+
+  const schedule = (listener: TurnsListener) => {
+    if (debounceTimer) window.clearTimeout(debounceTimer);
+    debounceTimer = window.setTimeout(() => {
+      void refresh().then(listener);
+    }, 350);
+  };
+
+  return {
+    site: profile.site,
+    capabilities,
+    detectSite(url) {
+      return siteMatchesUrl(profile.site, url);
+    },
+    getLatestTurns() {
+      resetCacheForConversation();
+      if (latestTurns.length === 0) latestTurns = mergeNativeWebTurns([], readCurrentTurns());
+      return latestTurns;
+    },
+    refreshLatestTurns: refresh,
+    refreshCompleteTurns: refresh,
+    harvestTurnsByScrolling: refresh,
+    async jumpToTurn(target) {
+      if (!target.navigation) return { ok: false, reason: "This Grok turn has no native navigation identity." };
+      resetCacheForConversation();
+      if (!target.navigation.navigationId.startsWith("grok-turn:")) {
+        return resolveNativeWebTarget(target.navigation, profile);
+      }
+      return navigateGrokTarget(target.navigation, {
+        findMounted: findMountedGrokResponseElement,
+        reveal(element) {
+          revealWebTurnElement(element as HTMLElement, getWebChatScrollElement(profile));
+        }
+      });
+    },
+    startObserver(listener) {
+      if (!observer) {
+        observer = new MutationObserver(() => schedule(listener));
+        observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+      }
+      resetCacheForConversation();
+      startGrokNativeObserver(() => schedule(listener));
+      schedule(listener);
+    },
+    toTurnsMessage(turns) {
+      return {
+        type: "TURNMAP_TURNS_UPDATED",
+        turns,
+        conversationTitle: getWebConversationTitle(profile),
+        conversationId: getWebConversationId(profile),
+        site: profile.site,
+        harvestMeta: lastHarvestMeta ?? {
+          attempted: false,
+          source: grokNativeIndex.getActiveTurns().length > 0 ? "conversation-api" : "native-navigation",
+          scrollContainer: "document",
+          scrollHeight: document.documentElement.scrollHeight,
+          clientHeight: document.documentElement.clientHeight,
+          scannedSteps: 0,
+          diagnostics: getLastWebExtractionDiagnostics(profile)
+        }
+      };
+    }
+  };
+}
+
 function createQwenAdapter(
   profile: WebConversationProfile,
   capabilities: NativeConversationCapabilities = capabilitiesForBuiltInSite("qwen")
@@ -2540,7 +2653,9 @@ const webAdapters = webProfiles.map((profile) =>
         ? createQwenAdapter(profile)
         : profile.site.id === "claude"
           ? createClaudeAdapter(profile)
-          : createWebAdapter(profile)
+          : profile.site.id === "grok"
+            ? createGrokAdapter(profile)
+            : createWebAdapter(profile)
 );
 
 export const conversationAdapters: ConversationAdapter[] = [chatGptAdapter, ...webAdapters];
