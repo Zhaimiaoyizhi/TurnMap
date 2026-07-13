@@ -48,7 +48,7 @@ export const BUILT_IN_NATIVE_CAPABILITY_RECORDS: BuiltInNativeCapabilityRecord[]
   mountedDomRecord("kimi", "blocked-auth", "docs/qa/native-navigation/kimi-2026-07-12.md"),
   mountedDomRecord("doubao", "blocked-auth", "docs/qa/native-navigation/doubao-2026-07-12.md"),
   mountedDomRecord("qwen", "smoke-verified", "docs/qa/native-navigation/qwen-2026-07-12.md", [
-    "Two repeated mounted turns passed an anonymous browser smoke test; off-screen native indexing remains unverified."
+    "Two repeated mounted turns passed an anonymous browser smoke test; an evidence-gated structured index is implemented, but off-screen direct remount remains unverified."
   ]),
   mountedDomRecord("gemini", "smoke-verified", "docs/qa/native-navigation/gemini-2026-07-12.md", [
     "Two repeated mounted turns passed an anonymous browser smoke test; off-screen native indexing remains unverified."

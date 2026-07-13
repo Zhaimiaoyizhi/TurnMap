@@ -45,6 +45,14 @@ import {
   waitForMountedDoubaoMessageElement
 } from "./doubao-native-navigation";
 import {
+  findMountedQwenTurnElement,
+  mergeQwenNativeTurns,
+  navigateQwenTarget,
+  qwenConversationIdFromUrl,
+  qwenNativeIndex,
+  startQwenNativeObserver
+} from "./qwen-native-navigation";
+import {
   bindClaudeNativeTurns,
   claudeConversationIdFromUrl,
   claudeNativeIndex,
@@ -502,6 +510,7 @@ const webProfiles: WebConversationProfile[] = [
   {
     ...sharedWebSelectors,
     site: siteById("qwen"),
+    messageIdAttributes: ["data-chat", "data-message-id", "data-turn-id", "data-id", "id"],
     titleSuffixPattern: /\s*[-|]\s*(Qwen|通义|千问).*$/i,
     titleFromFirstUserMessage: true,
     titleSelectors: [
@@ -2143,6 +2152,129 @@ function createDoubaoAdapter(
   };
 }
 
+function createQwenAdapter(
+  profile: WebConversationProfile,
+  capabilities: NativeConversationCapabilities = capabilitiesForBuiltInSite("qwen")
+): ConversationAdapter {
+  let latestTurns: Turn[] = [];
+  let latestConversationId = "";
+  let observer: MutationObserver | null = null;
+  let debounceTimer: number | null = null;
+  let lastHarvestMeta: HarvestMeta | undefined;
+
+  const resetCacheForConversation = () => {
+    const conversationId = getWebConversationId(profile);
+    qwenNativeIndex.activate(qwenConversationIdFromUrl(window.location.href));
+    if (conversationId !== latestConversationId) {
+      latestConversationId = conversationId;
+      latestTurns = [];
+      lastHarvestMeta = undefined;
+    }
+  };
+
+  const readMountedTurns = () => attachNativeWebNavigation(extractTurnsFromDocument(profile), profile.site.id);
+
+  const readCurrentTurns = () => {
+    const mountedTurns = readMountedTurns();
+    const nativeTurns = qwenNativeIndex.getActiveTurns();
+    if (nativeTurns.length === 0) return mountedTurns;
+
+    const nativeMessageIds = new Set(nativeTurns.map((turn) => turn.navigation?.messageId).filter(Boolean));
+    const enrichedNative = mergeQwenNativeTurns(nativeTurns, mountedTurns);
+    const strongMountedExtras = mountedTurns.filter((turn) => {
+      const messageId = turn.sourceAnchor.userMessageId;
+      return Boolean(messageId && !nativeMessageIds.has(messageId) && findMountedQwenTurnElement(messageId));
+    });
+    return [...enrichedNative, ...strongMountedExtras];
+  };
+
+  const refresh = async () => {
+    resetCacheForConversation();
+    const currentTurns = readCurrentTurns();
+    latestTurns = qwenNativeIndex.getActiveTurns().length > 0
+      ? currentTurns
+      : mergeNativeWebTurns(latestTurns, currentTurns);
+    lastHarvestMeta = {
+      attempted: false,
+      source: qwenNativeIndex.getActiveTurns().length > 0 ? "conversation-api" : "native-navigation",
+      scrollContainer: "document",
+      scrollHeight: document.documentElement.scrollHeight,
+      clientHeight: document.documentElement.clientHeight,
+      scannedSteps: 0,
+      diagnostics: getLastWebExtractionDiagnostics(profile)
+    };
+    return latestTurns;
+  };
+
+  const schedule = (listener: TurnsListener) => {
+    if (debounceTimer) window.clearTimeout(debounceTimer);
+    debounceTimer = window.setTimeout(() => {
+      void refresh().then((turns) => {
+        if (turns.length === 0 && profile.suppressEmptyObserverRefresh) return;
+        listener(turns);
+      });
+    }, 350);
+  };
+
+  return {
+    site: profile.site,
+    capabilities,
+    detectSite(url) {
+      return siteMatchesUrl(profile.site, url);
+    },
+    getLatestTurns() {
+      resetCacheForConversation();
+      if (latestTurns.length === 0) latestTurns = mergeNativeWebTurns([], readCurrentTurns());
+      return latestTurns;
+    },
+    refreshLatestTurns: refresh,
+    refreshCompleteTurns: refresh,
+    harvestTurnsByScrolling: refresh,
+    async jumpToTurn(target) {
+      if (!target.navigation) {
+        return { ok: false, reason: "This Qwen turn has no native navigation identity." };
+      }
+      resetCacheForConversation();
+      if (!target.navigation.navigationId.startsWith("qwen-turn:")) {
+        return resolveNativeWebTarget(target.navigation, profile);
+      }
+      return navigateQwenTarget(target.navigation, {
+        findMounted: findMountedQwenTurnElement,
+        reveal(element) {
+          revealWebTurnElement(element, getWebChatScrollElement(profile));
+        }
+      });
+    },
+    startObserver(listener) {
+      if (!observer) {
+        observer = new MutationObserver(() => schedule(listener));
+        observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+      }
+      resetCacheForConversation();
+      startQwenNativeObserver(() => schedule(listener));
+      schedule(listener);
+    },
+    toTurnsMessage(turns) {
+      return {
+        type: "TURNMAP_TURNS_UPDATED",
+        turns,
+        conversationTitle: getWebConversationTitle(profile),
+        conversationId: getWebConversationId(profile),
+        site: profile.site,
+        harvestMeta: lastHarvestMeta ?? {
+          attempted: false,
+          source: qwenNativeIndex.getActiveTurns().length > 0 ? "conversation-api" : "native-navigation",
+          scrollContainer: "document",
+          scrollHeight: document.documentElement.scrollHeight,
+          clientHeight: document.documentElement.clientHeight,
+          scannedSteps: 0,
+          diagnostics: getLastWebExtractionDiagnostics(profile)
+        }
+      };
+    }
+  };
+}
+
 function createDeepSeekAdapter(
   profile: WebConversationProfile,
   capabilities: NativeConversationCapabilities = capabilitiesForBuiltInSite("deepseek")
@@ -2404,9 +2536,11 @@ const webAdapters = webProfiles.map((profile) =>
     ? createGeminiAdapter(profile)
     : profile.site.id === "doubao"
       ? createDoubaoAdapter(profile)
-      : profile.site.id === "claude"
-        ? createClaudeAdapter(profile)
-        : createWebAdapter(profile)
+      : profile.site.id === "qwen"
+        ? createQwenAdapter(profile)
+        : profile.site.id === "claude"
+          ? createClaudeAdapter(profile)
+          : createWebAdapter(profile)
 );
 
 export const conversationAdapters: ConversationAdapter[] = [chatGptAdapter, ...webAdapters];

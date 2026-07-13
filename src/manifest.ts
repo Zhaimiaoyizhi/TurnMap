@@ -65,6 +65,21 @@ const manifest: Manifest = {
       world: "MAIN"
     },
     {
+      matches: [
+        "https://chat.qwen.ai/*",
+        "https://qianwen.com/*",
+        "https://www.qianwen.com/*",
+        "https://*.qianwen.com/*",
+        "https://tongyi.aliyun.com/*",
+        "https://*.tongyi.aliyun.com/*",
+        "https://qianwen.aliyun.com/*",
+        "https://*.qianwen.aliyun.com/*"
+      ],
+      js: ["qwen-conversation-observer.js"],
+      run_at: "document_start",
+      world: "MAIN"
+    },
+    {
       matches: ["https://gemini.google.com/*"],
       js: ["gemini-conversation-observer.js"],
       run_at: "document_start",

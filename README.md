@@ -47,7 +47,7 @@ ChatGPT is TurnMap's verified native reference route. The other built-in adapter
 | DeepSeek | Identity-first mounted DOM fallback | Exact mounted-identity jump | Best effort | Unmounted turns fail safely; no scroll/text search. |
 | Kimi | Identity-first mounted DOM fallback | Exact mounted-identity jump | Best effort | Unmounted turns fail safely; no scroll/text search. |
 | Doubao | Identity-first mounted DOM fallback | Exact mounted-identity jump | Best effort | Unmounted turns fail safely; no scroll/text search. |
-| Qwen | Identity-first mounted DOM fallback | Exact mounted-identity jump | Best effort | Two repeated mounted turns smoke-tested; no off-screen/native claim. |
+| Qwen | Evidence-gated structured index; capability remains mounted-DOM | Exact mounted strong-ID jump | Best effort | Two repeated mounted turns smoke-tested; no verified off-screen remount/native claim. |
 | Gemini | Identity-first mounted DOM fallback | Exact mounted-identity jump | Best effort | Two repeated mounted turns smoke-tested; no off-screen/native claim. |
 | Google AI Studio | Identity-first mounted DOM fallback | Exact mounted-identity jump | Best effort | Unmounted turns fail safely; no scroll/text search. |
 | Claude | Identity-first mounted DOM fallback | Exact mounted-identity jump | Best effort | Unmounted turns fail safely; no scroll/text search. |

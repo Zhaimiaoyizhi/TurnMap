@@ -2,6 +2,22 @@
 
 All notable changes to TurnMap will be documented in this file.
 
+## [Unreleased] - Qwen Silent Native Index
+
+### Added
+
+- Added a clean-room Qwen conversation index that passively captures the existing `GET /chats/:id` response at `document_start`, follows the active `history.currentId` parent chain, and assigns stable conversation/user-message identities without scrolling the page.
+
+### Changed
+
+- Qwen now prefers the structured active-branch history over mounted-DOM extraction, retains early turns when their DOM rounds are absent, enriches streamed answers on the same navigation identity, and clears cached identities on SPA conversation changes.
+- Qwen direct navigation now reveals only an exact mounted `data-chat` or `data-message-id` round. An unmounted or mismatched target fails explicitly without text matching or scroll search.
+
+### Verification Boundary
+
+- Synthetic complete-history, repeated-prompt identity, streaming enrichment, early-round retention, active regeneration branch, SPA isolation, exact mounted target, safe-failure, adapter-routing, and passive-capture coverage is recorded in `tests/qwen-native-navigation.test.mjs`.
+- The current public Qwen bundle confirmed `GET /chats/:id`, `history.messages`, `currentId`, `parentId`, stable message IDs, and response branch IDs. The available browser session could not provide a policy-verifiable authenticated inspection, so 20-turn/off-screen acceptance remains incomplete and Qwen stays `smoke-verified` at the mounted-DOM capability tier.
+
 ## [Unreleased] - DeepSeek Silent Native Navigation
 
 ### Added
