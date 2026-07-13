@@ -19,6 +19,23 @@ test("release instructions support loading the unpacked build in Chrome", async 
   assert.match(packageScript, /chrome:\/\/extensions/i);
 });
 
+test("integrated eight-site preview metadata uses the fresh 0.9.2 package version", async () => {
+  const packageJson = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
+  const packageLock = JSON.parse(await readFile(new URL("../package-lock.json", import.meta.url), "utf8"));
+  const manifest = JSON.parse(await readFile(new URL("../public/manifest.json", import.meta.url), "utf8"));
+  const readme = await readFile(new URL("../README.md", import.meta.url), "utf8");
+  const readmeZh = await readFile(new URL("../README.zh-CN.md", import.meta.url), "utf8");
+  const changelog = await readFile(new URL("../CHANGELOG.md", import.meta.url), "utf8");
+
+  assert.equal(packageJson.version, "0.9.2");
+  assert.equal(packageLock.version, "0.9.2");
+  assert.equal(packageLock.packages[""].version, "0.9.2");
+  assert.equal(manifest.version, "0.9.2");
+  assert.match(readme, /Latest local preview package: `turnmap-v0\.9\.2\.zip`/);
+  assert.match(readmeZh, /最新本地预览包：`turnmap-v0\.9\.2\.zip`/);
+  assert.match(changelog, /^## \[0\.9\.2\] - Eight-Site Silent Navigation Integration$/m);
+});
+
 test("permission review documents the memory-only ChatGPT header policy", async () => {
   const permissionReview = await readFile(new URL("../docs/permissions-review.md", import.meta.url), "utf8");
 

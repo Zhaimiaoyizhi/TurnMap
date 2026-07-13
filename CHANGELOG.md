@@ -2,101 +2,103 @@
 
 All notable changes to TurnMap will be documented in this file.
 
-## [Unreleased] - Grok Silent Native Index
+## [0.9.2] - Eight-Site Silent Navigation Integration
 
-### Added
+### Grok Silent Native Index
+
+#### Added
 
 - Added a clean-room Grok native response index that passively observes the site's existing conversation response stream at `document_start`, pairs human and assistant responses by `parentResponseId`, and assigns stable origin/conversation/response identities without scrolling the page.
 
-### Changed
+#### Changed
 
 - Grok now prefers structured `responseId`, `sender`, `message`, and `parentResponseId` data over mounted-DOM text. Assistant-side prompt echo fields and repeated nested response objects do not create duplicate turns, while longer streamed answers enrich the same navigation identity.
 - Grok direct navigation reveals only an exact mounted backend response ID. A missing or mismatched target fails explicitly without selecting a neighboring response, text matching, or scroll search.
 - `grok.com` and `x.com` native caches are origin-scoped. The X Grok shell retains safe mounted-DOM fallback because anonymous browser evidence reached the X login flow and did not prove protocol compatibility with `grok.com`.
 
-### Verification Boundary
+#### Verification Boundary
 
 - Synthetic prompt-echo, repeated-text identity, nested-response deduplication, streaming enrichment, origin isolation, exact-target, wrong-ID, safe-failure, adapter-routing, and eager passive-capture coverage is recorded in `tests/grok-native-navigation.test.mjs`.
 - The current public `grok.com` page and production bundles confirmed `/c/:conversationId`, `GET/POST /rest/app-chat/conversations/:conversationId/responses`, and the `responseId` / `sender` / `message` / `parentResponseId` response graph. Authenticated long-conversation and off-screen acceptance remains unavailable, so Grok stays `blocked-auth` at the mounted-DOM capability tier.
 
-## [Unreleased] - Kimi Silent Native Navigation
+### Kimi Silent Native Navigation
 
-### Added
+#### Added
 
 - Added a clean-room Kimi conversation index that passively captures the existing `ListMessages` response at `document_start`, silently follows its pagination tokens, reconstructs the active `parent_id` chain, and assigns stable conversation/user-message identities without scrolling the page.
 - Added exact Kimi segment binding through the page's Vue message objects so mounted turns keep their native message IDs across DOM remounts.
 
-### Changed
+#### Changed
 
 - Kimi now prefers structured message history over mounted-DOM extraction, merges consecutive assistant segments into one turn, enriches attachments and references without duplicate body text, and clears cached identities on SPA conversation changes.
 - Kimi direct navigation now reveals only an exact `data-turnmap-kimi-message-id` target. It may ask Kimi's native client state to load older segments after an explicit user jump, but a missing or mismatched target fails safely without text matching or extraction-time scroll search.
 
-### Verification Boundary
+#### Verification Boundary
 
 - Synthetic paged-history, repeated-prompt identity, multi-assistant-segment merge, attachment/reference deduplication, streaming enrichment, SPA isolation, DOM remount, exact-target, wrong-ID, adapter-routing, and no-scroll observer coverage is recorded in `tests/kimi-native-navigation.test.mjs`.
 - The current public Kimi production bundle confirmed `ListMessages` pagination, stable message and parent IDs, Vue segment identity, and the native previous-segment loader. An authenticated long/off-screen conversation was not available, so browser acceptance remains `blocked-auth` and the capability registry is unchanged.
 
-## [Unreleased] - GLM / Z.ai Variant Split And Silent Index
+### GLM / Z.ai Variant Split And Silent Index
 
-### Added
+#### Added
 
 - Added a clean-room Z.ai conversation index that passively captures existing `/api/v1/chats/new` and chat-detail request/response pairs at `document_start`, follows the active `history.currentId` parent chain, and assigns stable conversation/message UUID identities without scrolling the page.
 
-### Changed
+#### Changed
 
 - Split the previous broad `glm` selector profile into host-scoped ChatGLM and Z.ai variants so their DOM selectors, native response handling, and cached identities cannot leak across frontends.
 - Z.ai now prefers the structured UUID index when available, ignores reasoning/planning fields in final assistant text, enriches mounted turns only by exact `message-<UUID>` identity, and reveals only an exact mounted target. Missing or mismatched targets fail explicitly without text matching or scroll search.
 
-### Verification Boundary
+#### Verification Boundary
 
 - Synthetic active-branch, repeated-prompt UUID, streaming enrichment, planning exclusion, variant/host/conversation isolation, exact mounted target, safe-failure, adapter-routing, and passive-capture coverage is recorded in `tests/glm-native-navigation.test.mjs`.
 - The 2026-07-13 browser investigation confirmed Z.ai's `chat.history.messages` payload and mounted `message-<UUID>` ids, but slider verification blocked completed streaming and long/off-screen acceptance. ChatGLM was blocked by slider verification before its application shell. The external `glm` capability therefore remains `smoke-verified` at the mounted-DOM tier, with per-host limitations documented separately.
 
-## [Unreleased] - Qwen Silent Native Index
+### Qwen Silent Native Index
 
-### Added
+#### Added
 
 - Added a clean-room Qwen conversation index that passively captures the existing `GET /chats/:id` response at `document_start`, follows the active `history.currentId` parent chain, and assigns stable conversation/user-message identities without scrolling the page.
 
-### Changed
+#### Changed
 
 - Qwen now prefers the structured active-branch history over mounted-DOM extraction, retains early turns when their DOM rounds are absent, enriches streamed answers on the same navigation identity, and clears cached identities on SPA conversation changes.
 - Qwen direct navigation now reveals only an exact mounted `data-chat` or `data-message-id` round. An unmounted or mismatched target fails explicitly without text matching or scroll search.
 
-### Verification Boundary
+#### Verification Boundary
 
 - Synthetic complete-history, repeated-prompt identity, streaming enrichment, early-round retention, active regeneration branch, SPA isolation, exact mounted target, safe-failure, adapter-routing, and passive-capture coverage is recorded in `tests/qwen-native-navigation.test.mjs`.
 - The current public Qwen bundle confirmed `GET /chats/:id`, `history.messages`, `currentId`, `parentId`, stable message IDs, and response branch IDs. The available browser session could not provide a policy-verifiable authenticated inspection, so 20-turn/off-screen acceptance remains incomplete and Qwen stays `smoke-verified` at the mounted-DOM capability tier.
 
-## [Unreleased] - DeepSeek Silent Native Navigation
+### DeepSeek Silent Native Navigation
 
-### Added
+#### Added
 
 - Added a clean-room DeepSeek conversation index that passively captures `/api/v0/chat/history_messages` at `document_start`, follows the active `parent_id` chain from `current_message_id`, and assigns stable conversation/message identities to repeated prompts without scrolling the page.
 - Added a deterministic, user-triggered DeepSeek virtual-list bridge that targets the exact native message ID and revalidates the exact `[data-virtual-list-item-key]` after remount.
 
-### Changed
+#### Changed
 
 - DeepSeek now prefers the structured active-branch history over mounted-DOM extraction, excludes `THINK` fragments from assistant answers, and merges streamed response fragments without replacing stable turn identities.
 - DeepSeek direct navigation now resolves an exact mounted message or invokes one exact native virtual-list target. Missing, wrong, or unremounted targets fail explicitly without similarity matching or scroll search.
 
-### Verification Boundary
+#### Verification Boundary
 
 - Synthetic full-history, repeated-prompt identity, active-branch, thinking exclusion, streaming enrichment, SPA isolation, exact remount, wrong-ID, timeout, adapter-routing, and passive-capture coverage is recorded in `tests/deepseek-native-navigation.test.mjs`.
 - A real anonymous DeepSeek session and its production bundle confirmed the history schema, stable message IDs, active-parent chain, and native keyed virtual-list controller. The live page redirected to `/sign_in`, so authenticated long-conversation acceptance remains blocked and the capability registry stays `blocked-auth` at the mounted-DOM tier.
 
-## [Unreleased] - Claude Silent Native Index
+### Claude Silent Native Index
 
-### Added
+#### Added
 
 - Added a clean-room Claude conversation index that passively captures the page's existing conversation-detail response at `document_start`, builds stable user/assistant UUID identities, and follows the selected message leaf for edit, retry, and branch changes without scrolling the page.
 
-### Changed
+#### Changed
 
 - Claude now prefers the structured UUID index over mounted-DOM extraction, keeps same-branch captures grow-only, replaces stale turns on an explicit branch switch, and clears cached identities when the SPA conversation changes.
 - Claude direct navigation now resolves an exact mounted message UUID or a complete ordered UUID binding after DOM remount. If the target is off-screen and Claude exposes no verified native route or virtual-item control, TurnMap fails explicitly without text matching or scroll search.
 
-### Verification Boundary
+#### Verification Boundary
 
 - Synthetic full-history, repeated-text UUID, edit/retry branch, explicit-deletion, transient-partial, SPA isolation, DOM remount, streaming suffix, safe-failure, adapter-routing, and passive-capture coverage is recorded in `tests/claude-native-navigation.test.mjs`.
 - The real browser check on 2026-07-13 remained blocked by Cloudflare security verification. Claude therefore remains `blocked-access` at the mounted-DOM capability tier until an authenticated long conversation proves full indexing and deterministic off-screen navigation.
