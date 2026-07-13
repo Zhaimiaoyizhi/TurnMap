@@ -2,6 +2,23 @@
 
 All notable changes to TurnMap will be documented in this file.
 
+## [Unreleased] - Kimi Silent Native Navigation
+
+### Added
+
+- Added a clean-room Kimi conversation index that passively captures the existing `ListMessages` response at `document_start`, silently follows its pagination tokens, reconstructs the active `parent_id` chain, and assigns stable conversation/user-message identities without scrolling the page.
+- Added exact Kimi segment binding through the page's Vue message objects so mounted turns keep their native message IDs across DOM remounts.
+
+### Changed
+
+- Kimi now prefers structured message history over mounted-DOM extraction, merges consecutive assistant segments into one turn, enriches attachments and references without duplicate body text, and clears cached identities on SPA conversation changes.
+- Kimi direct navigation now reveals only an exact `data-turnmap-kimi-message-id` target. It may ask Kimi's native client state to load older segments after an explicit user jump, but a missing or mismatched target fails safely without text matching or extraction-time scroll search.
+
+### Verification Boundary
+
+- Synthetic paged-history, repeated-prompt identity, multi-assistant-segment merge, attachment/reference deduplication, streaming enrichment, SPA isolation, DOM remount, exact-target, wrong-ID, adapter-routing, and no-scroll observer coverage is recorded in `tests/kimi-native-navigation.test.mjs`.
+- The current public Kimi production bundle confirmed `ListMessages` pagination, stable message and parent IDs, Vue segment identity, and the native previous-segment loader. An authenticated long/off-screen conversation was not available, so browser acceptance remains `blocked-auth` and the capability registry is unchanged.
+
 ## [Unreleased] - Qwen Silent Native Index
 
 ### Added

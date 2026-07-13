@@ -53,6 +53,12 @@ const manifest: Manifest = {
       world: "MAIN"
     },
     {
+      matches: ["https://www.kimi.com/*", "https://kimi.com/*"],
+      js: ["kimi-conversation-observer.js"],
+      run_at: "document_start",
+      world: "MAIN"
+    },
+    {
       matches: ["https://claude.ai/*", "https://*.claude.ai/*"],
       js: ["claude-conversation-observer.js"],
       run_at: "document_start",
