@@ -3,10 +3,13 @@ import { adapterSites, chatGptSite, isChatGptUrl, selectAdapter, siteMatchesUrl,
 import type { JumpToTurnMessage } from "../shared/types";
 import type { NativeConversationCapabilities } from "../shared/types";
 import {
+  extractBlocksFromDocument,
   extractTurnsFromDocument,
   getLastWebExtractionDiagnostics,
+  getWebChatScrollElement,
   getWebConversationId,
   getWebConversationTitle,
+  revealWebTurnElement,
   type WebConversationProfile
 } from "./web-adapter-core";
 import {
@@ -24,6 +27,13 @@ import {
   mergeNativeWebTurns,
   resolveNativeWebTarget
 } from "./native-web-navigation";
+import {
+  bindGeminiNativeTurns,
+  findGeminiMountedTurnIndex,
+  geminiConversationIdFromUrl,
+  geminiNativeIndex,
+  startGeminiNativeObserver
+} from "./gemini-native-navigation";
 
 export type TurnsListener = (turns: Turn[]) => void;
 type HarvestMeta = NonNullable<ExtractedTurnsMessage["harvestMeta"]>;
@@ -1822,7 +1832,137 @@ export function createWebAdapter(
   };
 }
 
-const webAdapters = webProfiles.map((profile) => createWebAdapter(profile));
+function createGeminiAdapter(
+  profile: WebConversationProfile,
+  capabilities: NativeConversationCapabilities = capabilitiesForBuiltInSite("gemini")
+): ConversationAdapter {
+  let latestTurns: Turn[] = [];
+  let latestConversationId = "";
+  let observer: MutationObserver | null = null;
+  let debounceTimer: number | null = null;
+  let lastHarvestMeta: HarvestMeta | undefined;
+
+  const resetCacheForConversation = () => {
+    const conversationId = getWebConversationId(profile);
+    const nativeConversationId = geminiConversationIdFromUrl(window.location.href);
+    geminiNativeIndex.activate(nativeConversationId);
+    if (conversationId !== latestConversationId) {
+      latestConversationId = conversationId;
+      latestTurns = [];
+      lastHarvestMeta = undefined;
+    }
+  };
+
+  const readMountedTurns = () => extractTurnsFromDocument(profile);
+
+  const readCurrentTurns = () => {
+    const mountedTurns = readMountedTurns();
+    const mountedFallbackTurns = attachNativeWebNavigation(mountedTurns, profile.site.id);
+    const nativeTurns = geminiNativeIndex.getActiveTurns();
+    if (nativeTurns.length === 0) return mountedFallbackTurns;
+
+    const binding = bindGeminiNativeTurns(nativeTurns, mountedTurns);
+    if (binding.complete || binding.turns.length > nativeTurns.length) {
+      return binding.turns.map((turn, index) => turn.navigation ? turn : mountedFallbackTurns[index] ?? turn);
+    }
+    return nativeTurns;
+  };
+
+  const refresh = async () => {
+    resetCacheForConversation();
+    latestTurns = mergeNativeWebTurns(latestTurns, readCurrentTurns());
+    lastHarvestMeta = {
+      attempted: false,
+      source: geminiNativeIndex.getActiveTurns().length > 0 ? "conversation-api" : "native-navigation",
+      scrollContainer: "document",
+      scrollHeight: document.documentElement.scrollHeight,
+      clientHeight: document.documentElement.clientHeight,
+      scannedSteps: 0,
+      diagnostics: getLastWebExtractionDiagnostics(profile)
+    };
+    return latestTurns;
+  };
+
+  const schedule = (listener: TurnsListener) => {
+    if (debounceTimer) window.clearTimeout(debounceTimer);
+    debounceTimer = window.setTimeout(() => {
+      void refresh().then(listener);
+    }, 350);
+  };
+
+  return {
+    site: profile.site,
+    capabilities,
+    detectSite(url) {
+      return siteMatchesUrl(profile.site, url);
+    },
+    getLatestTurns() {
+      resetCacheForConversation();
+      if (latestTurns.length === 0) latestTurns = mergeNativeWebTurns([], readCurrentTurns());
+      return latestTurns;
+    },
+    refreshLatestTurns: refresh,
+    refreshCompleteTurns: refresh,
+    harvestTurnsByScrolling: refresh,
+    async jumpToTurn(target) {
+      if (!target.navigation) {
+        return { ok: false, reason: "This Gemini turn has no native navigation identity." };
+      }
+      resetCacheForConversation();
+      if (!target.navigation.navigationId.startsWith("gemini-turn:")) {
+        return resolveNativeWebTarget(target.navigation, profile);
+      }
+
+      const mountedTurns = readMountedTurns();
+      const nativeTurns = geminiNativeIndex.getActiveTurns();
+      const mountedIndex = findGeminiMountedTurnIndex(target.navigation, nativeTurns, mountedTurns);
+      if (mountedIndex == null) {
+        return {
+          ok: false,
+          reason: "The Gemini target is not deterministically mounted. TurnMap did not use text matching or scroll search."
+        };
+      }
+      const userBlocks = extractBlocksFromDocument(profile).filter((block) => block.role === "user" && block.element);
+      const element = userBlocks[mountedIndex]?.element;
+      if (!element) {
+        return { ok: false, reason: "Gemini rebuilt the target element before navigation could complete." };
+      }
+      revealWebTurnElement(element, getWebChatScrollElement(profile));
+      return { ok: true };
+    },
+    startObserver(listener) {
+      if (!observer) {
+        observer = new MutationObserver(() => schedule(listener));
+        observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+      }
+      resetCacheForConversation();
+      startGeminiNativeObserver(() => schedule(listener));
+      schedule(listener);
+    },
+    toTurnsMessage(turns) {
+      return {
+        type: "TURNMAP_TURNS_UPDATED",
+        turns,
+        conversationTitle: getWebConversationTitle(profile),
+        conversationId: getWebConversationId(profile),
+        site: profile.site,
+        harvestMeta: lastHarvestMeta ?? {
+          attempted: false,
+          source: geminiNativeIndex.getActiveTurns().length > 0 ? "conversation-api" : "native-navigation",
+          scrollContainer: "document",
+          scrollHeight: document.documentElement.scrollHeight,
+          clientHeight: document.documentElement.clientHeight,
+          scannedSteps: 0,
+          diagnostics: getLastWebExtractionDiagnostics(profile)
+        }
+      };
+    }
+  };
+}
+
+const webAdapters = webProfiles.map((profile) =>
+  profile.site.id === "gemini" ? createGeminiAdapter(profile) : createWebAdapter(profile)
+);
 
 export const conversationAdapters: ConversationAdapter[] = [chatGptAdapter, ...webAdapters];
 

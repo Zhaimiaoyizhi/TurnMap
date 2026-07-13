@@ -85,6 +85,16 @@
   "content_scripts": [
     {
       "matches": [
+        "https://gemini.google.com/*"
+      ],
+      "js": [
+        "gemini-conversation-observer.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
         "https://chatgpt.com/*",
         "https://*.chatgpt.com/*",
         "https://chat.deepseek.com/*",

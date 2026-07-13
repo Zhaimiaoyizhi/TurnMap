@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-07-12",
+  "updatedAt": "2026-07-13",
   "sites": [
     { "siteId": "chatgpt", "qaStatus": "verified", "report": "chatgpt-reference-2026-07-11.md" },
     { "siteId": "deepseek", "qaStatus": "blocked-auth", "report": "deepseek-2026-07-12.md" },

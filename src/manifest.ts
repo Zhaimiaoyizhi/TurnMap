@@ -47,6 +47,12 @@ const manifest: Manifest = {
   },
   content_scripts: [
     {
+      matches: ["https://gemini.google.com/*"],
+      js: ["gemini-conversation-observer.js"],
+      run_at: "document_start",
+      world: "MAIN"
+    },
+    {
       matches: BUILT_IN_CONTENT_MATCHES,
       js: ["content/index.js"],
       run_at: "document_idle"

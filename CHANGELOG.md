@@ -2,6 +2,22 @@
 
 All notable changes to TurnMap will be documented in this file.
 
+## [Unreleased]
+
+### Added
+
+- Added a clean-room Gemini native conversation index that passively captures the `hNvQHb` conversation response at `document_start`, derives stable request/response identities, and enriches streamed answers without scrolling the page.
+
+### Changed
+
+- Gemini now prefers the native conversation index for complete history extraction and uses deterministic ordered DOM binding for mounted turns. Repeated prompt text is resolved by native identity and position, never by similarity guessing.
+- Gemini direct navigation now reveals only a deterministically bound mounted target and otherwise fails safely without extraction scrolling or text-search fallback.
+
+### Verification Boundary
+
+- Synthetic protocol, repeated-turn, streaming-enrichment, remount, SPA-isolation, and safe-failure coverage is recorded in `tests/gemini-native-navigation.test.mjs`.
+- A real anonymous Gemini page confirmed that the early MAIN-world observer and TurnMap launcher load together. Long-conversation/off-screen acceptance was not completed, so Gemini remains `smoke-verified` at the mounted-DOM tier and is not promoted in the capability registry.
+
 ## [0.8.4] - Evidence-Tracked Navigation And Safe Custom Sites
 
 ### Added
