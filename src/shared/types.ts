@@ -16,6 +16,8 @@ export type TurnNavigation = {
   identitySource?: "native-message-id" | "mounted-dom-id";
   messageId?: string;
   turnId?: string;
+  parentMessageId?: string;
+  branchId?: string;
   nativeTocIndex?: number;
   turnIndex?: number;
   textHash?: string;

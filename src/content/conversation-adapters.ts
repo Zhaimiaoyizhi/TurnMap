@@ -45,6 +45,14 @@ import {
   waitForMountedDoubaoMessageElement
 } from "./doubao-native-navigation";
 import {
+  bindClaudeNativeTurns,
+  claudeConversationIdFromUrl,
+  claudeNativeIndex,
+  findClaudeMountedTurnIndex,
+  findMountedClaudeMessageElement,
+  startClaudeNativeObserver
+} from "./claude-native-navigation";
+import {
   bindDeepSeekNativeTurns,
   deepSeekConversationIdFromUrl,
   deepSeekNativeIndex,
@@ -956,6 +964,7 @@ const webProfiles: WebConversationProfile[] = [
         contentSelectors: [".font-claude-response", ".font-claude-message", "div.font-serif"]
       }
     ],
+    messageIdAttributes: ["data-message-uuid", "data-message-id", "data-uuid", "data-turn-id", "data-id", "id"],
     ...sharedWebSelectors
   },
   {
@@ -2252,6 +2261,142 @@ function createDeepSeekAdapter(
   };
 }
 
+function createClaudeAdapter(
+  profile: WebConversationProfile,
+  capabilities: NativeConversationCapabilities = capabilitiesForBuiltInSite("claude")
+): ConversationAdapter {
+  let latestTurns: Turn[] = [];
+  let latestConversationId = "";
+  let observer: MutationObserver | null = null;
+  let debounceTimer: number | null = null;
+  let lastHarvestMeta: HarvestMeta | undefined;
+
+  const resetCacheForConversation = () => {
+    const conversationId = getWebConversationId(profile);
+    claudeNativeIndex.activate(claudeConversationIdFromUrl(window.location.href));
+    if (conversationId !== latestConversationId) {
+      latestConversationId = conversationId;
+      latestTurns = [];
+      lastHarvestMeta = undefined;
+    }
+  };
+
+  const readMountedTurns = () => extractTurnsFromDocument(profile);
+
+  const readCurrentTurns = () => {
+    const mountedTurns = readMountedTurns();
+    const mountedFallbackTurns = attachNativeWebNavigation(mountedTurns, profile.site.id);
+    const nativeTurns = claudeNativeIndex.getActiveTurns();
+    if (nativeTurns.length === 0) return mountedFallbackTurns;
+    return bindClaudeNativeTurns(nativeTurns, mountedTurns).turns;
+  };
+
+  const refresh = async () => {
+    resetCacheForConversation();
+    const currentTurns = readCurrentTurns();
+    latestTurns = claudeNativeIndex.getActiveTurns().length > 0
+      ? currentTurns
+      : mergeNativeWebTurns(latestTurns, currentTurns);
+    lastHarvestMeta = {
+      attempted: false,
+      source: claudeNativeIndex.getActiveTurns().length > 0 ? "conversation-api" : "native-navigation",
+      scrollContainer: "document",
+      scrollHeight: document.documentElement.scrollHeight,
+      clientHeight: document.documentElement.clientHeight,
+      scannedSteps: 0,
+      diagnostics: getLastWebExtractionDiagnostics(profile)
+    };
+    return latestTurns;
+  };
+
+  const schedule = (listener: TurnsListener) => {
+    if (debounceTimer) window.clearTimeout(debounceTimer);
+    debounceTimer = window.setTimeout(() => {
+      void refresh().then((turns) => {
+        if (turns.length === 0 && profile.suppressEmptyObserverRefresh) return;
+        listener(turns);
+      });
+    }, 350);
+  };
+
+  return {
+    site: profile.site,
+    capabilities,
+    detectSite(url) {
+      return siteMatchesUrl(profile.site, url);
+    },
+    getLatestTurns() {
+      resetCacheForConversation();
+      if (latestTurns.length === 0) latestTurns = readCurrentTurns();
+      return latestTurns;
+    },
+    refreshLatestTurns: refresh,
+    refreshCompleteTurns: refresh,
+    harvestTurnsByScrolling: refresh,
+    async jumpToTurn(target) {
+      if (!target.navigation) {
+        return { ok: false, reason: "This Claude turn has no native navigation identity." };
+      }
+      resetCacheForConversation();
+      if (!target.navigation.navigationId.startsWith("claude-turn:")) {
+        return resolveNativeWebTarget(target.navigation, profile);
+      }
+
+      const exactElement = target.navigation.messageId
+        ? findMountedClaudeMessageElement(target.navigation.messageId)
+        : null;
+      if (exactElement) {
+        revealWebTurnElement(exactElement, getWebChatScrollElement(profile));
+        return { ok: true };
+      }
+
+      const mountedTurns = readMountedTurns();
+      const nativeTurns = claudeNativeIndex.getActiveTurns();
+      const mountedIndex = findClaudeMountedTurnIndex(target.navigation, nativeTurns, mountedTurns);
+      if (mountedIndex == null) {
+        return {
+          ok: false,
+          reason: "The Claude target is not deterministically mounted. TurnMap did not use text matching or scroll search."
+        };
+      }
+      const userBlocks = extractBlocksFromDocument(profile).filter((block) => block.role === "user" && block.element);
+      const element = userBlocks[mountedIndex]?.element;
+      if (!element) {
+        return { ok: false, reason: "Claude rebuilt the target element before navigation could complete." };
+      }
+      revealWebTurnElement(element, getWebChatScrollElement(profile));
+      return { ok: true };
+    },
+    startObserver(listener) {
+      if (!observer) {
+        observer = new MutationObserver(() => schedule(listener));
+        observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+      }
+      resetCacheForConversation();
+      startClaudeNativeObserver(() => schedule(listener));
+      schedule(listener);
+    },
+    toTurnsMessage(turns) {
+      return {
+        type: "TURNMAP_TURNS_UPDATED",
+        turns,
+        conversationTitle: getWebConversationTitle(profile),
+        conversationId: getWebConversationId(profile),
+        site: profile.site,
+        harvestMeta: lastHarvestMeta ?? {
+          attempted: false,
+          source: claudeNativeIndex.getActiveTurns().length > 0 ? "conversation-api" : "native-navigation",
+          scrollContainer: "document",
+          scrollHeight: document.documentElement.scrollHeight,
+          clientHeight: document.documentElement.clientHeight,
+          scannedSteps: 0,
+          diagnostics: getLastWebExtractionDiagnostics(profile)
+        }
+      };
+    }
+  };
+}
+
 const webAdapters = webProfiles.map((profile) =>
   profile.site.id === "deepseek"
     ? createDeepSeekAdapter(profile)
@@ -2259,7 +2404,9 @@ const webAdapters = webProfiles.map((profile) =>
     ? createGeminiAdapter(profile)
     : profile.site.id === "doubao"
       ? createDoubaoAdapter(profile)
-      : createWebAdapter(profile)
+      : profile.site.id === "claude"
+        ? createClaudeAdapter(profile)
+        : createWebAdapter(profile)
 );
 
 export const conversationAdapters: ConversationAdapter[] = [chatGptAdapter, ...webAdapters];

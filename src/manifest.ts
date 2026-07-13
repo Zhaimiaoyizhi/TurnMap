@@ -53,6 +53,12 @@ const manifest: Manifest = {
       world: "MAIN"
     },
     {
+      matches: ["https://claude.ai/*", "https://*.claude.ai/*"],
+      js: ["claude-conversation-observer.js"],
+      run_at: "document_start",
+      world: "MAIN"
+    },
+    {
       matches: ["https://doubao.com/*", "https://*.doubao.com/*"],
       js: ["doubao-conversation-observer.js"],
       run_at: "document_start",

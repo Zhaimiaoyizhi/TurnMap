@@ -19,6 +19,22 @@ All notable changes to TurnMap will be documented in this file.
 - Synthetic full-history, repeated-prompt identity, active-branch, thinking exclusion, streaming enrichment, SPA isolation, exact remount, wrong-ID, timeout, adapter-routing, and passive-capture coverage is recorded in `tests/deepseek-native-navigation.test.mjs`.
 - A real anonymous DeepSeek session and its production bundle confirmed the history schema, stable message IDs, active-parent chain, and native keyed virtual-list controller. The live page redirected to `/sign_in`, so authenticated long-conversation acceptance remains blocked and the capability registry stays `blocked-auth` at the mounted-DOM tier.
 
+## [Unreleased] - Claude Silent Native Index
+
+### Added
+
+- Added a clean-room Claude conversation index that passively captures the page's existing conversation-detail response at `document_start`, builds stable user/assistant UUID identities, and follows the selected message leaf for edit, retry, and branch changes without scrolling the page.
+
+### Changed
+
+- Claude now prefers the structured UUID index over mounted-DOM extraction, keeps same-branch captures grow-only, replaces stale turns on an explicit branch switch, and clears cached identities when the SPA conversation changes.
+- Claude direct navigation now resolves an exact mounted message UUID or a complete ordered UUID binding after DOM remount. If the target is off-screen and Claude exposes no verified native route or virtual-item control, TurnMap fails explicitly without text matching or scroll search.
+
+### Verification Boundary
+
+- Synthetic full-history, repeated-text UUID, edit/retry branch, explicit-deletion, transient-partial, SPA isolation, DOM remount, streaming suffix, safe-failure, adapter-routing, and passive-capture coverage is recorded in `tests/claude-native-navigation.test.mjs`.
+- The real browser check on 2026-07-13 remained blocked by Cloudflare security verification. Claude therefore remains `blocked-access` at the mounted-DOM capability tier until an authenticated long conversation proves full indexing and deterministic off-screen navigation.
+
 ## [0.9.1] - Doubao Silent Native Navigation
 
 ### Added
