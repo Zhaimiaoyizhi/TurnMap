@@ -2,6 +2,24 @@
 
 All notable changes to TurnMap will be documented in this file.
 
+## [0.9.1] - Doubao Silent Native Navigation
+
+### Added
+
+- Added a clean-room Doubao native conversation index that passively captures history and current-chain responses at `document_start`, preserves ghost turns by conversation/message identity, and enriches streamed answers without scrolling the page.
+- Added a deterministic, user-triggered virtual-list bridge for off-screen Doubao turns using the site's mounted React list controller and stable `data-message-id` targets.
+
+### Changed
+
+- Doubao now prefers the native message index over the mounted DOM while retaining strong-ID mounted turns that have not yet appeared in captured history.
+- Doubao direct navigation first reveals an exact mounted message. For an off-screen message it requests one native virtual target, waits for remount, revalidates the exact message ID, and otherwise fails safely without text matching or scroll search.
+- Updated package, extension, permission-review, and local preview metadata to `0.9.1`.
+
+### Verification Boundary
+
+- Synthetic full-history, repeated-text identity, streaming enrichment, transient-empty retention, conversation isolation, virtual-target, exact-remount, timeout, wrong-ID, adapter-routing, and passive-capture coverage is recorded in `tests/doubao-native-navigation.test.mjs`.
+- A real anonymous Doubao page and its current production bundles confirmed the early-load boundary, message endpoints, stable message IDs, and deterministic virtual-list controllers. Logged-in long-conversation/off-screen acceptance was not available, so Doubao remains `blocked-auth` at the mounted-DOM tier in the capability registry.
+
 ## [0.9.0] - Gemini Silent Native Navigation
 
 ### Added

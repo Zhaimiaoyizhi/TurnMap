@@ -2,6 +2,7 @@
 import { adapterSites, chatGptSite, isChatGptUrl, selectAdapter, siteMatchesUrl, type ConversationSite } from "./adapter-registry";
 import type { JumpToTurnMessage } from "../shared/types";
 import type { NativeConversationCapabilities } from "../shared/types";
+import { hashText } from "../shared/hash";
 import {
   extractBlocksFromDocument,
   extractTurnsFromDocument,
@@ -34,6 +35,15 @@ import {
   geminiNativeIndex,
   startGeminiNativeObserver
 } from "./gemini-native-navigation";
+import {
+  doubaoConversationIdFromUrl,
+  doubaoNativeIndex,
+  findMountedDoubaoMessageElement,
+  navigateDoubaoTarget,
+  requestDoubaoVirtualTarget,
+  startDoubaoNativeObserver,
+  waitForMountedDoubaoMessageElement
+} from "./doubao-native-navigation";
 
 export type TurnsListener = (turns: Turn[]) => void;
 type HarvestMeta = NonNullable<ExtractedTurnsMessage["harvestMeta"]>;
@@ -1960,8 +1970,164 @@ function createGeminiAdapter(
   };
 }
 
+function createDoubaoAdapter(
+  profile: WebConversationProfile,
+  capabilities: NativeConversationCapabilities = capabilitiesForBuiltInSite("doubao")
+): ConversationAdapter {
+  let latestTurns: Turn[] = [];
+  let latestConversationId = "";
+  let observer: MutationObserver | null = null;
+  let debounceTimer: number | null = null;
+  let lastHarvestMeta: HarvestMeta | undefined;
+
+  const resetCacheForConversation = () => {
+    const conversationId = getWebConversationId(profile);
+    doubaoNativeIndex.activate(doubaoConversationIdFromUrl(window.location.href));
+    if (conversationId !== latestConversationId) {
+      latestConversationId = conversationId;
+      latestTurns = [];
+      lastHarvestMeta = undefined;
+    }
+  };
+
+  const readMountedTurns = () => attachNativeWebNavigation(extractTurnsFromDocument(profile), profile.site.id);
+
+  const readCurrentTurns = () => {
+    const mountedTurns = readMountedTurns();
+    const nativeTurns = doubaoNativeIndex.getActiveTurns();
+    if (nativeTurns.length === 0) return mountedTurns;
+
+    const nativeMessageIds = new Set(nativeTurns.map((turn) => turn.navigation?.messageId).filter(Boolean));
+    const mountedByMessageId = new Map(
+      mountedTurns
+        .filter((turn) => turn.sourceAnchor.userMessageId)
+        .map((turn) => [turn.sourceAnchor.userMessageId, turn] as const)
+    );
+    const enrichedNative = nativeTurns.map((turn) => {
+      const mounted = mountedByMessageId.get(turn.navigation?.messageId ?? "");
+      if (!mounted) return turn;
+      const userText = mounted.userText.length > turn.userText.length ? mounted.userText : turn.userText;
+      const assistantText = mounted.assistantText.length > turn.assistantText.length
+        ? mounted.assistantText
+        : turn.assistantText;
+      if (userText === turn.userText && assistantText === turn.assistantText) return turn;
+      return {
+        ...turn,
+        userText,
+        assistantText,
+        sourceAnchor: {
+          ...turn.sourceAnchor,
+          userHash: hashText(userText),
+          assistantHash: hashText(assistantText),
+          userPreview: userText.slice(0, 120),
+          assistantPreview: assistantText.slice(0, 120)
+        },
+        navigation: turn.navigation ? {
+          ...turn.navigation,
+          textHash: hashText(userText),
+          userPreview: userText.slice(0, 120)
+        } : undefined
+      };
+    });
+    const strongMountedExtras = mountedTurns.filter((turn) => {
+      const messageId = turn.sourceAnchor.userMessageId;
+      return Boolean(messageId && !nativeMessageIds.has(messageId) && findMountedDoubaoMessageElement(messageId));
+    });
+    return [...enrichedNative, ...strongMountedExtras];
+  };
+
+  const refresh = async () => {
+    resetCacheForConversation();
+    latestTurns = mergeNativeWebTurns(latestTurns, readCurrentTurns());
+    lastHarvestMeta = {
+      attempted: false,
+      source: doubaoNativeIndex.getActiveTurns().length > 0 ? "conversation-api" : "native-navigation",
+      scrollContainer: "document",
+      scrollHeight: document.documentElement.scrollHeight,
+      clientHeight: document.documentElement.clientHeight,
+      scannedSteps: 0,
+      diagnostics: getLastWebExtractionDiagnostics(profile)
+    };
+    return latestTurns;
+  };
+
+  const schedule = (listener: TurnsListener) => {
+    if (debounceTimer) window.clearTimeout(debounceTimer);
+    debounceTimer = window.setTimeout(() => {
+      void refresh().then((turns) => {
+        if (turns.length === 0 && profile.suppressEmptyObserverRefresh) return;
+        listener(turns);
+      });
+    }, 350);
+  };
+
+  return {
+    site: profile.site,
+    capabilities,
+    detectSite(url) {
+      return siteMatchesUrl(profile.site, url);
+    },
+    getLatestTurns() {
+      resetCacheForConversation();
+      if (latestTurns.length === 0) latestTurns = mergeNativeWebTurns([], readCurrentTurns());
+      return latestTurns;
+    },
+    refreshLatestTurns: refresh,
+    refreshCompleteTurns: refresh,
+    harvestTurnsByScrolling: refresh,
+    async jumpToTurn(target) {
+      if (!target.navigation) {
+        return { ok: false, reason: "This Doubao turn has no native navigation identity." };
+      }
+      resetCacheForConversation();
+      if (!target.navigation.navigationId.startsWith("doubao-turn:")) {
+        return resolveNativeWebTarget(target.navigation, profile);
+      }
+      return navigateDoubaoTarget(target.navigation, {
+        findMounted: findMountedDoubaoMessageElement,
+        requestVirtualTarget: requestDoubaoVirtualTarget,
+        waitForMounted: waitForMountedDoubaoMessageElement,
+        reveal(element) {
+          revealWebTurnElement(element, getWebChatScrollElement(profile));
+        }
+      });
+    },
+    startObserver(listener) {
+      if (!observer) {
+        observer = new MutationObserver(() => schedule(listener));
+        observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+      }
+      resetCacheForConversation();
+      startDoubaoNativeObserver(() => schedule(listener));
+      schedule(listener);
+    },
+    toTurnsMessage(turns) {
+      return {
+        type: "TURNMAP_TURNS_UPDATED",
+        turns,
+        conversationTitle: getWebConversationTitle(profile),
+        conversationId: getWebConversationId(profile),
+        site: profile.site,
+        harvestMeta: lastHarvestMeta ?? {
+          attempted: false,
+          source: doubaoNativeIndex.getActiveTurns().length > 0 ? "conversation-api" : "native-navigation",
+          scrollContainer: "document",
+          scrollHeight: document.documentElement.scrollHeight,
+          clientHeight: document.documentElement.clientHeight,
+          scannedSteps: 0,
+          diagnostics: getLastWebExtractionDiagnostics(profile)
+        }
+      };
+    }
+  };
+}
+
 const webAdapters = webProfiles.map((profile) =>
-  profile.site.id === "gemini" ? createGeminiAdapter(profile) : createWebAdapter(profile)
+  profile.site.id === "gemini"
+    ? createGeminiAdapter(profile)
+    : profile.site.id === "doubao"
+      ? createDoubaoAdapter(profile)
+      : createWebAdapter(profile)
 );
 
 export const conversationAdapters: ConversationAdapter[] = [chatGptAdapter, ...webAdapters];

@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "minimum_chrome_version": "116",
   "name": "TurnMap",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "Turn AI conversations into editable mind maps.",
   "icons": {
     "16": "icons/turnmap-16.png",
@@ -83,6 +83,17 @@
     "type": "module"
   },
   "content_scripts": [
+    {
+      "matches": [
+        "https://doubao.com/*",
+        "https://*.doubao.com/*"
+      ],
+      "js": [
+        "doubao-conversation-observer.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
     {
       "matches": [
         "https://gemini.google.com/*"

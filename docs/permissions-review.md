@@ -1,6 +1,6 @@
 # TurnMap Permission Review
 
-This document explains the permissions used by TurnMap `v0.9.0`.
+This document explains the permissions used by TurnMap `v0.9.1`.
 
 ## Required Extension Permissions
 
@@ -38,7 +38,7 @@ This document explains the permissions used by TurnMap `v0.9.0`.
 
 ## Review Notes
 
-- TurnMap is current-conversation scoped. It does not build a cross-conversation graph in `v0.9.0`.
+- TurnMap is current-conversation scoped. It does not build a cross-conversation graph in `v0.9.1`.
 - Conversation maps, raw API keys, layout preferences, and UI preferences are stored locally in the browser extension profile.
 - AI features send selected conversation content only to the provider configured by the user.
 - API key values are redacted from task logs and debug reports; task logs may keep non-secret diagnostics such as provider id, model, host, and error category.
@@ -52,6 +52,6 @@ This document explains the permissions used by TurnMap `v0.9.0`.
 
 ## Release Decision
 
-The current permission set is acceptable for the local GitHub `v0.9.0` preview.
+The current permission set is acceptable for the local GitHub `v0.9.1` preview.
 Before store submission, revisit whether `webRequest` and broad optional custom
 provider host access need additional store-review wording or narrower defaults.
