@@ -144,6 +144,17 @@
     },
     {
       "matches": [
+        "https://chat.z.ai/*",
+        "https://z.ai/*"
+      ],
+      "js": [
+        "glm-conversation-observer.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
         "https://chatgpt.com/*",
         "https://*.chatgpt.com/*",
         "https://chat.deepseek.com/*",

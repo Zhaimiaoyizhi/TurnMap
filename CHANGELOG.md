@@ -2,6 +2,22 @@
 
 All notable changes to TurnMap will be documented in this file.
 
+## [Unreleased] - GLM / Z.ai Variant Split And Silent Index
+
+### Added
+
+- Added a clean-room Z.ai conversation index that passively captures existing `/api/v1/chats/new` and chat-detail request/response pairs at `document_start`, follows the active `history.currentId` parent chain, and assigns stable conversation/message UUID identities without scrolling the page.
+
+### Changed
+
+- Split the previous broad `glm` selector profile into host-scoped ChatGLM and Z.ai variants so their DOM selectors, native response handling, and cached identities cannot leak across frontends.
+- Z.ai now prefers the structured UUID index when available, ignores reasoning/planning fields in final assistant text, enriches mounted turns only by exact `message-<UUID>` identity, and reveals only an exact mounted target. Missing or mismatched targets fail explicitly without text matching or scroll search.
+
+### Verification Boundary
+
+- Synthetic active-branch, repeated-prompt UUID, streaming enrichment, planning exclusion, variant/host/conversation isolation, exact mounted target, safe-failure, adapter-routing, and passive-capture coverage is recorded in `tests/glm-native-navigation.test.mjs`.
+- The 2026-07-13 browser investigation confirmed Z.ai's `chat.history.messages` payload and mounted `message-<UUID>` ids, but slider verification blocked completed streaming and long/off-screen acceptance. ChatGLM was blocked by slider verification before its application shell. The external `glm` capability therefore remains `smoke-verified` at the mounted-DOM tier, with per-host limitations documented separately.
+
 ## [Unreleased] - Qwen Silent Native Index
 
 ### Added

@@ -58,7 +58,9 @@ export const BUILT_IN_NATIVE_CAPABILITY_RECORDS: BuiltInNativeCapabilityRecord[]
   mountedDomRecord("perplexity", "blocked-access", "docs/qa/native-navigation/perplexity-2026-07-12.md"),
   mountedDomRecord("grok", "blocked-auth", "docs/qa/native-navigation/grok-2026-07-12.md"),
   mountedDomRecord("glm", "smoke-verified", "docs/qa/native-navigation/glm-2026-07-12.md", [
-    "One mounted turn passed an anonymous browser smoke test; repeated and off-screen native indexing remain unverified."
+    "One mounted turn passed an anonymous browser smoke test; repeated and off-screen native indexing remain unverified.",
+    "ChatGLM inspection was blocked by slider verification before the application shell, so it remains mounted-DOM only.",
+    "Z.ai exposed stable message UUIDs and chat.history.messages, but slider verification blocked completed streaming and long/off-screen acceptance; its structured index remains evidence-gated."
   ]),
   mountedDomRecord("mistral", "blocked-access", "docs/qa/native-navigation/mistral-2026-07-12.md"),
   mountedDomRecord("arena", "blocked-access", "docs/qa/native-navigation/arena-2026-07-12.md")
