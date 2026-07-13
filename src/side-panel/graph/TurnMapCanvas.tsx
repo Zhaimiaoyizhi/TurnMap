@@ -31,7 +31,7 @@ import { suggestSemanticEdges } from "../ai/link-suggestions";
 import { summarizeTurn, summarizeTurns } from "../ai/node-summary";
 import { buildTopicCandidatePairs } from "../ai/topic-analysis";
 import { Icon } from "../components/Icon";
-import type { I18nKey } from "../i18n/i18n-storage";
+import type { I18nKey } from "../../localization/index.ts";
 import { useI18n } from "../i18n/useI18n";
 import { loadAiSettings } from "../settings/ai-settings-storage";
 import { applyTheme, normalizeTheme, resolveTheme, type ThemeMode } from "../settings/theme-storage";
@@ -85,6 +85,12 @@ import {
 } from "./edge-weight";
 import { graphIssuesSummary, repairGraphSnapshot, type GraphIssue } from "./graph-health";
 import {
+  cloneGraphDocument as cloneSnapshot,
+  graphDocumentKey as snapshotKey,
+  type GraphDocumentSnapshot as GraphSnapshot,
+  type TurnNodeData
+} from "./graph-document.ts";
+import {
   mergeSourceAnchors,
   normalizeNodeTags,
   resolveSourceTurnsForAnchors,
@@ -124,39 +130,6 @@ type TurnMapCanvasProps = {
   }) => void | Promise<void>;
 };
 
-type TurnNodeData = {
-  title: string;
-  summary: string;
-  turn?: Turn;
-  isConversationRoot?: boolean;
-  isCustomNode?: boolean;
-  status?: "open" | "review" | "done";
-  tags?: string[];
-  sourceAnchors?: SourceAnchor[];
-  color?: NodeColorName;
-  collapsed?: boolean;
-  important?: boolean;
-  titleLineClamp?: number;
-  summaryLineClamp?: number;
-  dimensions?: { width: number; height: number; manual: boolean };
-  answerExpansion?: AnswerExpansion;
-  topicGroupId?: string;
-  topicGroupMemberIds?: string[];
-  onUpdate?: (nodeId: string, updates: { title?: string; summary?: string }) => void;
-  onResize?: (nodeId: string, dimensions: { width: number; height: number; manual: boolean }) => void;
-  onMiniNodeUpdate?: (
-    nodeId: string,
-    miniNodeId: string,
-    updates: Partial<Pick<AnswerMiniNode, "title" | "color" | "important">>
-  ) => void;
-  onMiniNodeDelete?: (nodeId: string, miniNodeId: string) => void;
-  onMiniNodeSelect?: (nodeId: string, miniNodeId: string) => void;
-  selectedMiniNodeId?: string;
-  onSummarize?: (nodeId: string) => void;
-  onJump?: (nodeId: string) => void;
-  isSummarizing?: boolean;
-};
-
 type CustomNodeRecord = {
   id: string;
   position: { x: number; y: number };
@@ -172,15 +145,6 @@ type CustomNodeRecord = {
   answerExpansion?: AnswerExpansion;
   topicGroupId?: string;
   topicGroupMemberIds?: string[];
-};
-
-type GraphSnapshot = {
-  nodes: Node<TurnNodeData>[];
-  edges: Edge[];
-  hiddenRoot: boolean;
-  hiddenAutoEdgeIds: string[];
-  hiddenNodeIds: string[];
-  topicGroups: TopicGroupRecord[];
 };
 
 type EdgeRelationship =
@@ -2198,61 +2162,6 @@ function customNodesFromImportedGraph(graph: ExportedGraph): CustomNodeRecord[] 
         ? node.topicGroupMemberIds.filter((nodeId) => typeof nodeId === "string")
         : undefined
     }));
-}
-
-function cloneSnapshot(snapshot: GraphSnapshot): GraphSnapshot {
-  return {
-    nodes: snapshot.nodes.map((node) => ({
-      ...node,
-      position: { ...node.position },
-      data: {
-        ...node.data,
-        tags: node.data.tags ? [...node.data.tags] : undefined,
-        sourceAnchors: sanitizeSourceAnchors(node.data.sourceAnchors),
-        dimensions: node.data.dimensions ? { ...node.data.dimensions } : undefined,
-        answerExpansion: node.data.answerExpansion
-          ? JSON.parse(JSON.stringify(node.data.answerExpansion))
-          : undefined
-      }
-    })),
-    edges: snapshot.edges.map((edge) => ({
-      ...edge,
-      data: edge.data ? { ...edge.data } : undefined
-    })),
-    hiddenRoot: snapshot.hiddenRoot,
-    hiddenAutoEdgeIds: [...snapshot.hiddenAutoEdgeIds],
-    hiddenNodeIds: [...snapshot.hiddenNodeIds],
-    topicGroups: JSON.parse(JSON.stringify(snapshot.topicGroups))
-  };
-}
-
-function snapshotKey(snapshot: GraphSnapshot): string {
-  return JSON.stringify({
-    nodes: snapshot.nodes.map((node) => ({
-      id: node.id,
-      position: node.position,
-      data: {
-        title: node.data.title,
-        summary: node.data.summary,
-        status: node.data.status,
-        tags: node.data.tags,
-        sourceAnchors: node.data.sourceAnchors,
-        isCustomNode: node.data.isCustomNode
-      },
-      selected: node.selected
-    })),
-    edges: snapshot.edges.map((edge) => ({
-      id: edge.id,
-      source: edge.source,
-      target: edge.target,
-      label: edge.label,
-      data: edge.data
-    })),
-    hiddenRoot: snapshot.hiddenRoot,
-    hiddenAutoEdgeIds: snapshot.hiddenAutoEdgeIds,
-    hiddenNodeIds: snapshot.hiddenNodeIds,
-    topicGroups: snapshot.topicGroups
-  });
 }
 
 export function TurnMapCanvas({

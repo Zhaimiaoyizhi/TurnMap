@@ -1,4 +1,4 @@
-import assert from "node:assert/strict";
+﻿import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
@@ -25,7 +25,7 @@ test("AI max token settings keep a conservative default and higher cap", async (
 });
 
 test("AI provider i18n explains raw API key, preset limits, and endpoint ids", async () => {
-  const source = await readFile(new URL("../src/side-panel/i18n/i18n-storage.ts", import.meta.url), "utf8");
+  const source = await readFile(new URL("../src/localization/catalogs.ts", import.meta.url), "utf8");
 
   for (const key of [
     "ai.apiKeyRawHint",

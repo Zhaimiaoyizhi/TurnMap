@@ -9,9 +9,9 @@ This document explains the permissions used by TurnMap `v0.8.4`.
 | `activeTab` | Identify and communicate with the currently active supported AI conversation tab when the user opens or refreshes TurnMap. | Current active tab. |
 | `tabs` | Open Full Page mode, activate the source conversation tab for jump-to-source, and route map actions back to the correct tab. | Tab id, URL, and activation state needed for navigation. |
 | `scripting` | Inject the content script if TurnMap opens before the content script is already available on the supported AI conversation page. | Current supported AI conversation tab. |
-| `sidePanel` | Provide the Edge side panel interface. | Extension UI only. |
+| `sidePanel` | Provide the Chrome/Edge side panel interface. TurnMap declares Chrome 116+ because it calls `sidePanel.open()`. | Extension UI only. |
 | `storage` | Save graph state, UI preferences, AI settings, launcher position, Float state, and custom-site profiles locally. | Browser extension profile. |
-| `webRequest` | Capture replayable ChatGPT backend request headers so TurnMap can fetch the full current ChatGPT conversation without visible page scrolling when possible. | ChatGPT backend requests only. |
+| `webRequest` | Capture an explicit allowlist of replayable ChatGPT backend request headers so TurnMap can fetch the full current ChatGPT conversation without visible page scrolling when possible. Captured values stay in memory only and are discarded when the service worker stops. | ChatGPT backend requests only. |
 
 ## Required Host Permissions
 
@@ -46,6 +46,8 @@ This document explains the permissions used by TurnMap `v0.8.4`.
 - Built-in provider presets are convenience defaults, not a guarantee that every account, region, or future model catalog will expose the same model forever.
 - Custom provider permissions are requested at runtime through `chrome.permissions.request`.
 - Custom-site profiles are selector-only, cannot shadow a built-in origin, are saved disabled, and request their exact origin only when the user clicks Validate & Enable. Imports remain disabled until revalidated.
+- ChatGPT request headers use an explicit allowlist: standard representation headers plus `oai-` and `x-openai-` names. Cookies, authorization headers, arbitrary custom headers, and `sec-` headers are not replayed. Header values are memory only and are never written to extension storage.
+- The complete Chrome feature baseline is Chrome 116+ because `chrome.sidePanel.open()` was introduced in that release.
 - GitHub/unpacked preview installs do not auto-update themselves. Store builds should use browser-managed updates later.
 
 ## Release Decision

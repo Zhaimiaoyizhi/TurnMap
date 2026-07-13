@@ -26,7 +26,7 @@ import {
   loadLanguageSettings,
   saveCustomLanguage,
   saveLanguageMode
-} from "../side-panel/i18n/i18n-storage";
+} from "../localization/index.ts";
 import { recordApiTaskLog } from "../side-panel/task-log";
 import type { LayoutMode } from "../side-panel/graph/graph-storage";
 import "../side-panel/styles.css";

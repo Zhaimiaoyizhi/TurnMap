@@ -1,4 +1,4 @@
-import assert from "node:assert/strict";
+﻿import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
@@ -41,7 +41,7 @@ test("custom sites UI supports separate merge or replace import and JSON export"
 });
 
 test("custom sites settings copy is bilingual and describes local permission boundaries", () => {
-  const i18n = readFileSync(new URL("../src/side-panel/i18n/i18n-storage.ts", import.meta.url), "utf8");
+  const i18n = readFileSync(new URL("../src/localization/catalogs.ts", import.meta.url), "utf8");
   const panel = readFileSync(new URL("../src/settings-page/CustomSitesSettingsPanel.tsx", import.meta.url), "utf8");
   const keys = [
     "settings.customSites.title",

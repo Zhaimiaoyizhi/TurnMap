@@ -1,4 +1,6 @@
 ﻿import type { ExtractedTurnsMessage, JumpToTurnMessage, Turn } from "../shared/types";
+import { isContentCommand } from "../shared/runtime-protocol.ts";
+import { getContentLifecycleState, startContentPhase } from "./content-lifecycle.ts";
 import { selectConversationAdapter, type ConversationAdapter } from "./conversation-adapters";
 import { previewCustomSiteProfile, selectConversationAdapterAsync } from "./custom-site-adapter";
 import { getTurnMapLauncherIconUrl, loadTurnMapLauncherIconSrc } from "./launcher-icon";
@@ -20,26 +22,9 @@ import {
   translationsFor,
   type I18nKey,
   type TranslationMap
-} from "../side-panel/i18n/i18n-storage";
+} from "../localization/index.ts";
 
-declare global {
-  interface Window {
-    __chatMapContentStarted?: boolean;
-    __chatMapContentMessageListenerStarted?: boolean;
-    __chatMapContentStorageListenerStarted?: boolean;
-    __chatMapContentThemeMediaListenerStarted?: boolean;
-  }
-}
-
-function isContentMessage(message: unknown): message is JumpToTurnMessage | { type: string } {
-  return Boolean(
-    message &&
-      typeof message === "object" &&
-      "type" in message &&
-      typeof (message as { type: unknown }).type === "string" &&
-      (message as { type: string }).type.startsWith("TURNMAP_")
-  );
-}
+const contentLifecycle = getContentLifecycleState(window);
 
 function broadcastTurns(message: ExtractedTurnsMessage): void {
   const conversationChanged = message.conversationId.trim() !== floatingConversationId;
@@ -923,38 +908,36 @@ function startTurnMapContentObservers(adapter: ConversationAdapter | null = acti
 }
 
 function startTurnMapContentStorageListener(): void {
-  if (window.__chatMapContentStorageListenerStarted) return;
-  window.__chatMapContentStorageListenerStarted = true;
-  chrome.storage.onChanged.addListener((changes, areaName) => {
-    if (areaName !== "local") return;
-    if (launcherEnabledKey() in changes) {
-      syncLauncherFromStorage();
-    }
-    if (floatingPanelEnabledKey() in changes) {
-      setFloatingPanel(Boolean(changes[floatingPanelEnabledKey()].newValue), false);
-    }
-    if (themeStorageKey() in changes) {
-      applyFloatingTheme(normalizeFloatingTheme(changes[themeStorageKey()].newValue));
-    }
-    if (LANGUAGE_STORAGE_KEY in changes || CUSTOM_LANGUAGES_STORAGE_KEY in changes) {
-      refreshFloatingNavigatorTranslations();
-    }
+  startContentPhase(contentLifecycle, "storage", () => {
+    chrome.storage.onChanged.addListener((changes, areaName) => {
+      if (areaName !== "local") return;
+      if (launcherEnabledKey() in changes) {
+        syncLauncherFromStorage();
+      }
+      if (floatingPanelEnabledKey() in changes) {
+        setFloatingPanel(Boolean(changes[floatingPanelEnabledKey()].newValue), false);
+      }
+      if (themeStorageKey() in changes) {
+        applyFloatingTheme(normalizeFloatingTheme(changes[themeStorageKey()].newValue));
+      }
+      if (LANGUAGE_STORAGE_KEY in changes || CUSTOM_LANGUAGES_STORAGE_KEY in changes) {
+        refreshFloatingNavigatorTranslations();
+      }
+    });
   });
 }
 
 function startTurnMapContentThemeMediaListener(): void {
-  if (window.__chatMapContentThemeMediaListenerStarted) return;
-  window.__chatMapContentThemeMediaListenerStarted = true;
-  window.matchMedia?.("(prefers-color-scheme: dark)")?.addEventListener?.("change", () => {
-    if (floatingThemeSetting === "browser") applyFloatingTheme("browser");
+  startContentPhase(contentLifecycle, "theme", () => {
+    window.matchMedia?.("(prefers-color-scheme: dark)")?.addEventListener?.("change", () => {
+      if (floatingThemeSetting === "browser") applyFloatingTheme("browser");
+    });
   });
 }
 
 function startTurnMapContentMessageListener(): void {
-  if (window.__chatMapContentMessageListenerStarted) return;
-  window.__chatMapContentMessageListenerStarted = true;
-  chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {
-    if (!isContentMessage(message)) return false;
+  startContentPhase(contentLifecycle, "messages", () => chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {
+    if (!isContentCommand(message)) return false;
 
     if (message.type === "TURNMAP_REQUEST_TURNS") {
       void (async () => {
@@ -980,14 +963,14 @@ function startTurnMapContentMessageListener(): void {
     if (message.type === "TURNMAP_VALIDATE_CUSTOM_SITE") {
       sendResponse(
         previewCustomSiteProfile(
-          (message as unknown as { profile: Parameters<typeof previewCustomSiteProfile>[0] }).profile
+          message.profile
         )
       );
       return true;
     }
 
     if (message.type === "TURNMAP_JUMP_TO_TURN") {
-      performJumpToTurn(message as JumpToTurnMessage)
+      performJumpToTurn(message)
         .then(sendResponse)
         .catch(() =>
           sendResponse({ ok: false, reason: "The original conversation turn could not be found." })
@@ -996,7 +979,7 @@ function startTurnMapContentMessageListener(): void {
     }
 
     if (message.type === "TURNMAP_SET_FLOATING_PANEL") {
-      setFloatingPanel(Boolean((message as { enabled?: unknown }).enabled));
+      setFloatingPanel(message.enabled);
       sendResponse({ ok: true });
       return true;
     }
@@ -1008,21 +991,21 @@ function startTurnMapContentMessageListener(): void {
     }
 
     return false;
-  });
+  }));
 }
 
 const launcherNeedsRepair = !document.querySelector(".turnmap-launcher") || !document.getElementById("turnmap-launcher-style");
 
-if (!window.__chatMapContentStarted || launcherNeedsRepair) {
-  window.__chatMapContentStarted = true;
-  startTurnMapContentUi();
-}
+const uiStarted = startContentPhase(contentLifecycle, "ui", startTurnMapContentUi);
+if (!uiStarted && launcherNeedsRepair) startTurnMapContentUi();
 
 startTurnMapContentStorageListener();
 startTurnMapContentThemeMediaListener();
 startTurnMapContentMessageListener();
 void (async () => {
   const adapter = await activeAdapterReady;
-  startTurnMapContentObservers(adapter);
+  if (adapter) {
+    startContentPhase(contentLifecycle, "observer", () => startTurnMapContentObservers(adapter));
+  }
   if (adapter && floatingNavigatorEnabled) syncFloatingTurnsFromAdapter();
 })();

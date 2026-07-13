@@ -38,7 +38,7 @@ import {
   translationsFor,
   type I18nKey,
   type TranslationMap
-} from "../../side-panel/i18n/i18n-storage";
+} from "../../localization/index.ts";
 
 type WorkbenchView = "actions" | "library" | "variables" | "optimize" | "imagePrompt" | "apply";
 

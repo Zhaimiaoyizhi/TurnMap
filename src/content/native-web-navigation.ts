@@ -1,5 +1,6 @@
 import type { JumpToTurnResult, NativeConversationCapabilities, Turn, TurnNavigation } from "../shared/types";
 import {
+  blocksToTurns,
   extractBlocksFromDocument,
   getWebChatScrollElement,
   normalizeWebTurnIndexes,
@@ -31,25 +32,39 @@ export const NATIVE_WEB_DOM_CAPABILITIES: NativeConversationCapabilities = {
   ]
 };
 
-function nativeWebNavigation(siteId: string, turn: Turn): TurnNavigation {
+function nativeWebNavigation(siteId: string, turn: Turn, mountedOccurrence: number): TurnNavigation {
   const messageId = turn.sourceAnchor.userMessageId ?? `user-${turn.turnIndex}-${turn.sourceAnchor.userHash}`;
   const identitySource = SYNTHETIC_MOUNTED_ID.test(messageId) ? "mounted-dom-id" : "native-message-id";
+  const navigationId =
+    identitySource === "native-message-id"
+      ? `${siteId}-message:${messageId}`
+      : `${siteId}-mounted-user:${turn.sourceAnchor.userHash}:${mountedOccurrence}`;
 
   return {
     kind: "ophel_notSourceAnchor",
     site: siteId,
-    navigationId: `${siteId}-message:${messageId}`,
+    navigationId,
     identitySource,
     messageId,
-    turnIndex: turn.turnIndex
+    turnIndex: turn.turnIndex,
+    textHash: turn.sourceAnchor.userHash
   };
 }
 
 export function attachNativeWebNavigation(turns: Turn[], siteId: string): Turn[] {
-  return turns.map((turn) => ({
-    ...turn,
-    navigation: nativeWebNavigation(siteId, turn)
-  }));
+  const mountedOccurrences = new Map<string, number>();
+  return turns.map((turn) => {
+    const messageId = turn.sourceAnchor.userMessageId ?? "";
+    const mountedOccurrence = mountedOccurrences.get(turn.sourceAnchor.userHash) ?? 0;
+    if (SYNTHETIC_MOUNTED_ID.test(messageId)) {
+      mountedOccurrences.set(turn.sourceAnchor.userHash, mountedOccurrence + 1);
+    }
+
+    return {
+      ...turn,
+      navigation: nativeWebNavigation(siteId, turn, mountedOccurrence)
+    };
+  });
 }
 
 function shouldUseIncomingTurn(existing: Turn, incoming: Turn): boolean {
@@ -88,29 +103,10 @@ export async function resolveNativeWebTarget(
   }
 
   const userBlocks = extractBlocksFromDocument(profile).filter((block) => block.role === "user" && block.element);
-  for (let index = 0; index < userBlocks.length; index += 1) {
+  const candidateTurns = attachNativeWebNavigation(blocksToTurns(userBlocks), profile.site.id);
+  for (let index = 0; index < candidateTurns.length; index += 1) {
     const block = userBlocks[index];
-    const messageId = block.elementId ?? `user-${index}`;
-    const candidate = attachNativeWebNavigation(
-      [
-        {
-          id: messageId,
-          turnIndex: index,
-          userText: block.text,
-          assistantText: EMPTY_ASSISTANT_REPLY,
-          extractedAt: Date.now(),
-          sourceAnchor: {
-            turnIndex: index,
-            userMessageId: messageId,
-            userHash: "",
-            assistantHash: "",
-            userPreview: "",
-            assistantPreview: ""
-          }
-        }
-      ],
-      profile.site.id
-    )[0];
+    const candidate = candidateTurns[index];
 
     if (candidate.navigation?.navigationId === target.navigationId && block.element) {
       revealWebTurnElement(block.element, getWebChatScrollElement(profile));

@@ -1,21 +1,12 @@
 ﻿import type {
-  TurnMapMessage,
   CustomSitePreviewResult,
   ExtractedTurnsMessage,
   JumpToTurnMessage,
   JumpToTurnResult
 } from "./types";
-import { validateCustomSiteProfileDraft, type CustomSiteProfileDraft } from "./custom-site-profiles";
+import { validateCustomSiteProfileDraft, type CustomSiteProfileDraft } from "./custom-site-profiles.ts";
 
-export function isTurnMapMessage(value: unknown): value is TurnMapMessage {
-  return Boolean(
-    value &&
-      typeof value === "object" &&
-      "type" in value &&
-      typeof (value as { type: unknown }).type === "string" &&
-      (value as { type: string }).type.startsWith("TURNMAP_")
-  );
-}
+export { isTurnMapMessage } from "./runtime-protocol.ts";
 
 export async function requestTurnsFromActiveTab(options?: {
   harvest?: boolean;

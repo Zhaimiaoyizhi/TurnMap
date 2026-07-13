@@ -4,7 +4,7 @@
 
 Turn AI conversations into editable, jumpable, exportable mind maps.
 
-TurnMap is an Edge-first browser extension that maps the current AI conversation into a visual graph. Each question-answer turn becomes a node. Nodes can jump back to the original source message, be edited, linked, colored, collapsed, marked as important, summarized with AI, exported, and restored later.
+TurnMap is a Chromium Manifest V3 browser extension for Chrome and Edge that maps the current AI conversation into a visual graph. Each question-answer turn becomes a node. Nodes can jump back to the original source message, be edited, linked, colored, collapsed, marked as important, summarized with AI, exported, and restored later.
 
 > Status: early preview. TurnMap is not yet published to Edge Add-ons or Chrome Web Store. Install it manually from source or from a GitHub Release package.
 
@@ -91,7 +91,7 @@ The settings page keeps provider setup, prompt workbench data, safe custom-site 
 
 | View | Purpose |
 | --- | --- |
-| Side Panel | Work beside a supported AI conversation in Edge's side panel. |
+| Side Panel | Work beside a supported AI conversation in the browser side panel. |
 | Full Page | Use a larger map canvas while staying linked to the source conversation tab. |
 | Float | Use a compact in-page navigator on supported AI pages. |
 | Page Launcher | Use a small right-side launcher on supported AI pages to open TurnMap or settings. |
@@ -102,7 +102,7 @@ These items are planned before a wider public release:
 
 - **Update Notice**: notify users when a new GitHub Release or store version is available.
 - **More AI chat sites**: continue improving adapters for supported web AI products and add more sites as their page structures stabilize.Welcome to let me know your favourates!
-- **More browsers**: extend compatibility beyond Edge, especially Chrome (and maybe Firefox).
+- **More browsers**: extend compatibility beyond Chromium browsers, especially Firefox.
 - **More AI providers**: broaden API key support for more OpenAI-compatible and mainstream model providers.
 - **Stronger organization features**: improve local topic analysis, AI summaries, AI suggested links, provider compatibility, and task-log based troubleshooting.
 
@@ -111,7 +111,7 @@ These items are planned before a wider public release:
 Requirements:
 
 - Node.js
-- Microsoft Edge
+- Google Chrome 116+ or Microsoft Edge 116+
 - A supported web AI session
 
 Build:
@@ -121,18 +121,18 @@ npm install
 npm.cmd run build
 ```
 
-Load in Edge:
+Load in Chrome or Edge:
 
-1. Open `edge://extensions`.
+1. Open `chrome://extensions` in Chrome or `edge://extensions` in Edge.
 2. Enable Developer mode.
 3. Click Load unpacked.
 4. Select `<project-root>\dist`.
 5. Open a supported AI conversation.
-6. Open TurnMap from the extension action or Edge side panel.
+6. Open TurnMap from the extension action or browser side panel.
 
 ## Install From GitHub Release
 
-For preview builds, download the release zip from GitHub Releases, unzip it, and load the unpacked folder in Edge developer mode.
+For preview builds, download the release zip from GitHub Releases, unzip it, and load the unpacked folder in Chrome or Edge developer mode.
 
 GitHub/unpacked installs require manual updates. Store distribution is the right path for automatic browser-managed updates.
 

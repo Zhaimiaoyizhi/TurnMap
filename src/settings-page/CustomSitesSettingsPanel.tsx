@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { useI18n } from "../side-panel/i18n/useI18n";
-import type { I18nKey } from "../side-panel/i18n/i18n-storage";
+import type { I18nKey } from "../localization/index.ts";
 import {
   createCustomSiteProfile,
   exportCustomSiteProfiles,

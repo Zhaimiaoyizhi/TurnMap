@@ -11,7 +11,7 @@ import {
   loadLanguageSettings,
   normalizeLanguageMode,
   translationsFor
-} from "./i18n-storage";
+} from "../../localization/index.ts";
 
 type I18nState = {
   mode: LanguageMode;

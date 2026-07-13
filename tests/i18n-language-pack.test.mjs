@@ -10,7 +10,7 @@ import {
   placeholderMismatch,
   translationsFor,
   validateLanguagePack
-} from "../src/side-panel/i18n/i18n-storage.ts";
+} from "../src/localization/index.ts";
 
 const MINIMAL_PACK = {
   schemaVersion: 1,
@@ -139,7 +139,7 @@ test("generateCustomLanguage repairs invalid translation JSON once and saves the
 
 test("settings page exposes language pack import and export controls", async () => {
   const source = await readFile(new URL("../src/settings-page/main.tsx", import.meta.url), "utf8");
-  const i18nSource = await readFile(new URL("../src/side-panel/i18n/i18n-storage.ts", import.meta.url), "utf8");
+  const i18nSource = await readFile(new URL("../src/localization/catalogs.ts", import.meta.url), "utf8");
 
   assert.doesNotMatch(source, /settings\.languageCode/);
   assert.doesNotMatch(source, /customLanguageCode/);

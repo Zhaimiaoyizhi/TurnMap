@@ -40,6 +40,57 @@ test("native web turns receive site-scoped ophel_notSourceAnchor identities", as
   assert.equal(result.navigation.identitySource, "native-message-id");
 });
 
+test("mounted DOM identity stays stable when a DeepSeek turn moves between virtualized scan windows", async () => {
+  const { attachNativeWebNavigation } = await loadModule();
+  const [first] = attachNativeWebNavigation(
+    [turn(0, "How do I open this notebook?", "user-0-a1")],
+    "deepseek"
+  );
+  const [remounted] = attachNativeWebNavigation(
+    [turn(6, "How do I open this notebook?", "user-12-f9")],
+    "deepseek"
+  );
+
+  assert.equal(first.navigation.identitySource, "mounted-dom-id");
+  assert.equal(remounted.navigation.identitySource, "mounted-dom-id");
+  assert.equal(first.navigation.navigationId, remounted.navigation.navigationId);
+  assert.equal(first.navigation.textHash, hashText("How do I open this notebook?"));
+});
+
+test("mounted DOM identity keeps repeated prompts distinct within the same mounted window", async () => {
+  const { attachNativeWebNavigation } = await loadModule();
+  const repeated = attachNativeWebNavigation(
+    [turn(0, "Continue", "user-0-a1"), turn(1, "Continue", "user-2-b2")],
+    "deepseek"
+  );
+
+  assert.notEqual(repeated[0].navigation.navigationId, repeated[1].navigation.navigationId);
+});
+
+test("remounted DeepSeek turns merge by stable mounted identity instead of being appended", async () => {
+  const { attachNativeWebNavigation, mergeNativeWebTurns } = await loadModule();
+  const first = attachNativeWebNavigation(
+    [turn(0, "How do I open this notebook?", "user-0-a1", "Use Jupyter Notebook.")],
+    "deepseek"
+  );
+  const remounted = attachNativeWebNavigation(
+    [
+      turn(
+        8,
+        "How do I open this notebook?",
+        "user-16-f9",
+        "Use Jupyter Notebook or JupyterLab, then open the notebook from the file browser."
+      )
+    ],
+    "deepseek"
+  );
+
+  const merged = mergeNativeWebTurns(first, remounted);
+
+  assert.equal(merged.length, 1);
+  assert.match(merged[0].assistantText, /file browser/);
+});
+
 test("identity-first merge preserves repeated user questions with different native identities", async () => {
   const { attachNativeWebNavigation, mergeNativeWebTurns } = await loadModule();
   const repeated = attachNativeWebNavigation(

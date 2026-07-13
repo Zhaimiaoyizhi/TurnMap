@@ -3,47 +3,17 @@ import { Handle, NodeResizer, Position, type NodeProps } from "@xyflow/react";
 import {
   calculateMiniMapLayout,
   renderableMiniLinks,
-  type AnswerExpansion,
-  type AnswerMiniNode
+  type AnswerExpansion
 } from "../ai/answer-expansion";
-import type { SourceAnchor, Turn } from "../../shared/types.ts";
 import { useI18n } from "../i18n/useI18n";
 import { colorValue, type NodeColorName } from "./graph-colors";
+import type { TurnNodeData } from "./graph-document.ts";
 import { hasAiTag, sanitizeSourceAnchors } from "./source-anchors.ts";
 import { shouldShowAiSummaryButton } from "./summary-behavior.ts";
 
 export function TurnNode({ id, data, selected }: NodeProps) {
   const { t } = useI18n();
-  const nodeData = data as {
-    title: string;
-    summary: string;
-    turn?: Turn;
-    isConversationRoot?: boolean;
-    isCustomNode?: boolean;
-    status?: "open" | "review" | "done";
-    tags?: string[];
-    sourceAnchors?: SourceAnchor[];
-    color?: NodeColorName;
-    collapsed?: boolean;
-    important?: boolean;
-    titleLineClamp?: number;
-    summaryLineClamp?: number;
-    dimensions?: { width: number; height: number; manual: boolean };
-    answerExpansion?: AnswerExpansion;
-    onUpdate?: (nodeId: string, updates: { title?: string; summary?: string }) => void;
-    onResize?: (nodeId: string, dimensions: { width: number; height: number; manual: boolean }) => void;
-    onMiniNodeUpdate?: (
-      nodeId: string,
-      miniNodeId: string,
-      updates: Partial<Pick<AnswerMiniNode, "title" | "color" | "important">>
-    ) => void;
-    onMiniNodeDelete?: (nodeId: string, miniNodeId: string) => void;
-    onMiniNodeSelect?: (nodeId: string, miniNodeId: string) => void;
-    selectedMiniNodeId?: string;
-    onSummarize?: (nodeId: string) => void;
-    onJump?: (nodeId: string) => void;
-    isSummarizing?: boolean;
-  };
+  const nodeData = data as TurnNodeData;
   const [editingField, setEditingField] = useState<"title" | "summary" | null>(null);
   const canShowSummarizeButton = shouldShowAiSummaryButton({
     title: nodeData.title,

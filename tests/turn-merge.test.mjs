@@ -46,6 +46,33 @@ test("refresh enriches a streamed placeholder when the same identity later has a
   assert.equal(result.turns[0], completed);
 });
 
+test("refresh matches a remounted web turn by stable navigation identity", () => {
+  const mounted = turn("turn-uid-user-0-old", 0, "No text response");
+  mounted.sourceAnchor.userMessageId = "user-0-old";
+  mounted.navigation = {
+    kind: "ophel_notSourceAnchor",
+    site: "deepseek",
+    navigationId: "deepseek-mounted-user:question-hash:0",
+    identitySource: "mounted-dom-id",
+    messageId: "user-0-old",
+    textHash: "question-hash"
+  };
+  const remounted = turn("turn-uid-user-12-new", 8, "Completed DeepSeek answer");
+  remounted.sourceAnchor.userMessageId = "user-12-new";
+  remounted.sourceAnchor.assistantHash = "completed-answer-hash";
+  remounted.navigation = {
+    ...mounted.navigation,
+    messageId: "user-12-new",
+    turnIndex: 8
+  };
+
+  const result = mergeTurnUpdates([mounted], [remounted], "refresh");
+
+  assert.equal(result.added, 0);
+  assert.equal(result.turns.length, 1);
+  assert.equal(result.turns[0], remounted);
+});
+
 test("refresh index enriches a streamed placeholder without replacing completed neighbors", () => {
   const first = turn("turn-1", 0, "keep this answer");
   const pending = turn("turn-2", 1, "No text response");

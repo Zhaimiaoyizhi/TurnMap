@@ -10,6 +10,7 @@ export default defineConfig({
     rollupOptions: {
       input: resolve(__dirname, "src/content/index.ts"),
       output: {
+        format: "iife",
         entryFileNames: "content/index.js",
         inlineDynamicImports: true,
         assetFileNames: "assets/[name]-[hash][extname]"

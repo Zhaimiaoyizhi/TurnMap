@@ -2,21 +2,13 @@
 
 type HeaderMap = Record<string, string>;
 
-const HEADER_CACHE_KEY = "turnmap.backendHeaders";
+import { isBackgroundCommand } from "../shared/runtime-protocol.ts";
+
 const BACKEND_FILTER = { urls: ["https://chatgpt.com/backend-api/*"] };
+const REPLAYABLE_STANDARD_HEADERS = new Set(["accept", "accept-language", "content-type"]);
+const REPLAYABLE_CHATGPT_HEADER_PREFIXES = ["oai-", "x-openai-"];
 
 let cachedHeaders: HeaderMap | null = null;
-
-const FORBIDDEN_REQUEST_HEADERS = new Set([
-  "cookie",
-  "host",
-  "content-length",
-  "origin",
-  "referer",
-  "user-agent",
-  "connection",
-  "accept-encoding"
-]);
 
 chrome.runtime.onInstalled.addListener(() => {
   void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
@@ -28,9 +20,10 @@ function normalizeHeaderName(name: string): string {
 
 function canReplayHeader(name: string): boolean {
   const normalized = normalizeHeaderName(name);
-  if (FORBIDDEN_REQUEST_HEADERS.has(normalized)) return false;
-  if (normalized.startsWith("sec-")) return false;
-  return true;
+  return (
+    REPLAYABLE_STANDARD_HEADERS.has(normalized) ||
+    REPLAYABLE_CHATGPT_HEADER_PREFIXES.some((prefix) => normalized.startsWith(prefix))
+  );
 }
 
 function headersFromRequest(details: chrome.webRequest.OnBeforeSendHeadersDetails): HeaderMap {
@@ -39,34 +32,25 @@ function headersFromRequest(details: chrome.webRequest.OnBeforeSendHeadersDetail
   for (const header of details.requestHeaders ?? []) {
     if (!header.name || typeof header.value !== "string") continue;
     if (!canReplayHeader(header.name)) continue;
-    headers[header.name] = header.value;
+    headers[normalizeHeaderName(header.name)] = header.value;
   }
 
   headers.accept = headers.accept ?? "application/json";
   return headers;
 }
 
-async function saveHeaders(headers: HeaderMap): Promise<void> {
+function saveHeaders(headers: HeaderMap): void {
   cachedHeaders = headers;
-  await chrome.storage.session.set({ [HEADER_CACHE_KEY]: headers });
 }
 
-async function loadHeaders(): Promise<HeaderMap> {
+function loadHeaders(): HeaderMap {
   if (cachedHeaders) return cachedHeaders;
-
-  const stored = await chrome.storage.session.get(HEADER_CACHE_KEY);
-  const headers = stored[HEADER_CACHE_KEY];
-  if (headers && typeof headers === "object") {
-    cachedHeaders = headers as HeaderMap;
-    return cachedHeaders;
-  }
-
   return { accept: "application/json" };
 }
 
 chrome.webRequest.onBeforeSendHeaders.addListener(
   (details) => {
-    void saveHeaders(headersFromRequest(details));
+    saveHeaders(headersFromRequest(details));
     return undefined;
   },
   BACKEND_FILTER,
@@ -76,7 +60,7 @@ chrome.webRequest.onBeforeSendHeaders.addListener(
 async function fetchConversationApi(
   message: FetchConversationApiMessage
 ): Promise<FetchConversationApiResult> {
-  const headers = await loadHeaders();
+  const headers = loadHeaders();
 
   try {
     const response = await fetch(
@@ -135,21 +119,14 @@ async function openSettingsPage(): Promise<{ ok: boolean; reason?: string }> {
 }
 
 chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) => {
-  if (
-    !message ||
-    typeof message !== "object" ||
-    !("type" in message) ||
-    typeof (message as { type?: unknown }).type !== "string"
-  ) {
-    return false;
-  }
+  if (!isBackgroundCommand(message)) return false;
 
-  if ((message as { type: string }).type === "TURNMAP_FETCH_CONVERSATION_API") {
-    fetchConversationApi(message as FetchConversationApiMessage).then(sendResponse);
+  if (message.type === "TURNMAP_FETCH_CONVERSATION_API") {
+    fetchConversationApi(message).then(sendResponse);
     return true;
   }
 
-  if ((message as { type: string }).type === "TURNMAP_OPEN_SIDE_PANEL") {
+  if (message.type === "TURNMAP_OPEN_SIDE_PANEL") {
     openSidePanel(sender.tab?.id).then(sendResponse).catch((error) =>
       sendResponse({
         ok: false,
@@ -159,7 +136,7 @@ chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) =>
     return true;
   }
 
-  if ((message as { type: string }).type === "TURNMAP_OPEN_SETTINGS") {
+  if (message.type === "TURNMAP_OPEN_SETTINGS") {
     openSettingsPage().then(sendResponse);
     return true;
   }

@@ -1,5 +1,6 @@
 {
   "manifest_version": 3,
+  "minimum_chrome_version": "116",
   "name": "TurnMap",
   "version": "0.8.4",
   "description": "Turn AI conversations into editable mind maps.",
@@ -19,10 +20,17 @@
     }
   },
   "options_page": "src/settings-page/index.html",
-  "permissions": ["activeTab", "scripting", "sidePanel", "storage", "tabs", "webRequest"],
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "sidePanel",
+    "storage",
+    "tabs",
+    "webRequest"
+  ],
   "host_permissions": [
     "https://chatgpt.com/*",
-    "https://chatgpt.com/backend-api/*",
+    "https://*.chatgpt.com/*",
     "https://chat.deepseek.com/*",
     "https://www.kimi.com/*",
     "https://kimi.com/*",
@@ -55,6 +63,7 @@
     "https://www.arena.ai/*",
     "https://lmarena.ai/*",
     "https://www.lmarena.ai/*",
+    "https://chatgpt.com/backend-api/*",
     "https://api.openai.com/*",
     "https://api.deepseek.com/*",
     "https://openrouter.ai/*",
@@ -77,6 +86,7 @@
     {
       "matches": [
         "https://chatgpt.com/*",
+        "https://*.chatgpt.com/*",
         "https://chat.deepseek.com/*",
         "https://www.kimi.com/*",
         "https://kimi.com/*",
@@ -100,7 +110,7 @@
         "https://grok.com/*",
         "https://*.grok.com/*",
         "https://x.com/*",
-                    "https://chatglm.cn/*",
+        "https://chatglm.cn/*",
         "https://www.chatglm.cn/*",
         "https://chat.z.ai/*",
         "https://z.ai/*",
@@ -110,15 +120,20 @@
         "https://lmarena.ai/*",
         "https://www.lmarena.ai/*"
       ],
-      "js": ["content/index.js"],
+      "js": [
+        "content/index.js"
+      ],
       "run_at": "document_idle"
     }
   ],
   "web_accessible_resources": [
     {
-      "resources": ["icons/turnmap-128.png"],
+      "resources": [
+        "icons/turnmap-128.png"
+      ],
       "matches": [
         "https://chatgpt.com/*",
+        "https://*.chatgpt.com/*",
         "https://chat.deepseek.com/*",
         "https://www.kimi.com/*",
         "https://kimi.com/*",
@@ -142,7 +157,7 @@
         "https://grok.com/*",
         "https://*.grok.com/*",
         "https://x.com/*",
-                    "https://chatglm.cn/*",
+        "https://chatglm.cn/*",
         "https://www.chatglm.cn/*",
         "https://chat.z.ai/*",
         "https://z.ai/*",

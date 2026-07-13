@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { testAiConnection } from "../ai/openai-compatible";
-import type { I18nKey } from "../i18n/i18n-storage";
+import type { I18nKey } from "../../localization/index.ts";
 import { useI18n } from "../i18n/useI18n";
 import { recordApiTaskLog } from "../task-log";
 import {

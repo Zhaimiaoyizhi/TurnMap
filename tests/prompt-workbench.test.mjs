@@ -1,4 +1,4 @@
-import assert from "node:assert/strict";
+﻿import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
@@ -445,7 +445,7 @@ test("prompt workbench options expand on hover with immediate custom labels", ()
 
 test("prompt workbench content UI follows the same language setting as TurnMap settings", () => {
   const source = readFileSync(new URL("../src/content/prompt-workbench/index.ts", import.meta.url), "utf8");
-  const i18nSource = readFileSync(new URL("../src/side-panel/i18n/i18n-storage.ts", import.meta.url), "utf8");
+  const i18nSource = readFileSync(new URL("../src/localization/catalogs.ts", import.meta.url), "utf8");
 
   assert.match(source, /loadLanguageSettings/);
   assert.match(source, /translationsFor/);
@@ -492,7 +492,7 @@ test("ChatGPT prompt workbench reads contenteditable selections defensively", ()
 
 test("prompt workbench reports detailed AI optimize failure stages", () => {
   const source = readFileSync(new URL("../src/content/prompt-workbench/index.ts", import.meta.url), "utf8");
-  const i18nSource = readFileSync(new URL("../src/side-panel/i18n/i18n-storage.ts", import.meta.url), "utf8");
+  const i18nSource = readFileSync(new URL("../src/localization/catalogs.ts", import.meta.url), "utf8");
 
   assert.match(source, /renderOptimizeFailure/);
   assert.match(source, /readInput/);
@@ -506,7 +506,7 @@ test("prompt workbench reports detailed AI optimize failure stages", () => {
 
 test("prompt workbench exposes a lightweight image prompt optimizer entry", () => {
   const source = readFileSync(new URL("../src/content/prompt-workbench/index.ts", import.meta.url), "utf8");
-  const i18nSource = readFileSync(new URL("../src/side-panel/i18n/i18n-storage.ts", import.meta.url), "utf8");
+  const i18nSource = readFileSync(new URL("../src/localization/catalogs.ts", import.meta.url), "utf8");
 
   assert.match(source, /showImagePromptPanel/);
   assert.match(source, /toggleImagePromptOption/);
@@ -532,7 +532,7 @@ test("prompt workbench exposes a lightweight image prompt optimizer entry", () =
 test("prompt workbench is wired into content and settings surfaces with i18n", () => {
   const contentSource = readFileSync(new URL("../src/content/index.ts", import.meta.url), "utf8");
   const settingsSource = readFileSync(new URL("../src/settings-page/main.tsx", import.meta.url), "utf8");
-  const i18nSource = readFileSync(new URL("../src/side-panel/i18n/i18n-storage.ts", import.meta.url), "utf8");
+  const i18nSource = readFileSync(new URL("../src/localization/catalogs.ts", import.meta.url), "utf8");
   const packageSource = readFileSync(new URL("../package.json", import.meta.url), "utf8");
 
   assert.match(contentSource, /startPromptWorkbench/);

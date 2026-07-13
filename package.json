@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite build --watch",
-    "build": "tsc --noEmit && vite build && vite build --config vite.content.config.ts",
+    "build": "node scripts/write-manifest.mjs && tsc --noEmit && vite build && vite build --config vite.content.config.ts",
+    "manifest:check": "node scripts/write-manifest.mjs --check",
     "typecheck": "tsc --noEmit",
     "test:unit": "node --experimental-strip-types --test tests/*.test.mjs",
     "package": "npm run build && node scripts/package-extension.mjs"

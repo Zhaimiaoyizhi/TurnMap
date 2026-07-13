@@ -4,7 +4,7 @@
 
 把 AI 长对话转换成可编辑、可跳转、可导出的思维导图。
 
-TurnMap 是一个优先面向 Edge 的浏览器扩展，用来把当前网页端 AI 对话映射成可视化节点图。每一轮问答会成为一个节点，节点可以跳回原始网页消息，也可以被编辑、链接、染色、折叠、标记重要、AI 总结、导出，并在之后恢复继续整理。
+TurnMap 是一个面向 Chrome 与 Edge 的 Chromium Manifest V3 浏览器扩展，用来把当前网页端 AI 对话映射成可视化节点图。每一轮问答会成为一个节点，节点可以跳回原始网页消息，也可以被编辑、链接、染色、折叠、标记重要、AI 总结、导出，并在之后恢复继续整理。
 
 > 状态：早期预览版。TurnMap 还没有发布到 Edge Add-ons 或 Chrome Web Store。当前可以从源码手动安装，或从 GitHub Release 下载预览包。
 
@@ -67,7 +67,7 @@ TurnMap 的 ChatGPT 路径是 clean-room 实现。ophel 仅作为产品行为与
 
 | 视图 | 用途 |
 | --- | --- |
-| Side Panel | 在 Edge 侧边栏中与已支持 AI 对话网页并排使用。 |
+| Side Panel | 在浏览器侧边栏中与已支持 AI 对话网页并排使用。 |
 | Full Page | 使用更大的图谱画布，同时保持与来源对话标签页联动。 |
 | Float | 在已支持 AI 页面内使用紧凑的悬浮导航器。 |
 | Page Launcher | 在已支持 AI 页面右侧快速打开 TurnMap 或设置。 |
@@ -77,7 +77,7 @@ TurnMap 的 ChatGPT 路径是 clean-room 实现。ophel 仅作为产品行为与
 要求：
 
 - Node.js
-- Microsoft Edge
+- Google Chrome 116+ 或 Microsoft Edge 116+
 - 已支持的网页端 AI 会话
 
 构建：
@@ -87,18 +87,18 @@ npm install
 npm.cmd run build
 ```
 
-在 Edge 中加载：
+在 Chrome 或 Edge 中加载：
 
-1. 打开 `edge://extensions`。
+1. 在 Chrome 中打开 `chrome://extensions`，或在 Edge 中打开 `edge://extensions`。
 2. 启用 Developer mode。
 3. 点击 Load unpacked。
 4. 选择 `<project-root>\dist`。
 5. 打开一个已支持的 AI 对话。
-6. 从扩展按钮或 Edge 侧边栏打开 TurnMap。
+6. 从扩展按钮或浏览器侧边栏打开 TurnMap。
 
 ## 从 GitHub Release 安装
 
-对于预览版，可以从 GitHub Releases 下载 zip，解压后在 Edge 开发者模式中加载解压后的文件夹。
+对于预览版，可以从 GitHub Releases 下载 zip，解压后在 Chrome 或 Edge 开发者模式中加载解压后的文件夹。
 
 GitHub/unpacked 安装需要手动更新。真正适合普通用户自动更新的路径是浏览器插件商店分发。
 

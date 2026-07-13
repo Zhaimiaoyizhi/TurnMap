@@ -4,7 +4,7 @@ import test from "node:test";
 
 test("empty map copy is site-neutral for multi-site adapters", async () => {
   const canvasSource = await readFile(new URL("../src/side-panel/graph/TurnMapCanvas.tsx", import.meta.url), "utf8");
-  const i18nSource = await readFile(new URL("../src/side-panel/i18n/i18n-storage.ts", import.meta.url), "utf8");
+  const i18nSource = await readFile(new URL("../src/localization/catalogs.ts", import.meta.url), "utf8");
 
   assert.doesNotMatch(canvasSource, /Open a ChatGPT conversation/);
   assert.match(canvasSource, /app\.empty\.title/);
@@ -60,7 +60,7 @@ test("expanded answer mini maps keep node-sized coloring in live view and export
 test("rebuild action is localized and resets saved graph before regenerating", async () => {
   const appSource = await readFile(new URL("../src/side-panel/App.tsx", import.meta.url), "utf8");
   const canvasSource = await readFile(new URL("../src/side-panel/graph/TurnMapCanvas.tsx", import.meta.url), "utf8");
-  const i18nSource = await readFile(new URL("../src/side-panel/i18n/i18n-storage.ts", import.meta.url), "utf8");
+  const i18nSource = await readFile(new URL("../src/localization/catalogs.ts", import.meta.url), "utf8");
 
   assert.match(appSource, /app\.action\.rebuild/);
   assert.match(appSource, /app\.confirm\.rebuild/);
@@ -87,7 +87,7 @@ test("interface titles, hints, placeholders, and panel chrome are localized", as
   const aiPanelSource = await readFile(new URL("../src/side-panel/settings/AiSettingsPanel.tsx", import.meta.url), "utf8");
   const aiFormSource = await readFile(new URL("../src/side-panel/settings/AiSettingsForm.tsx", import.meta.url), "utf8");
   const settingsSource = await readFile(new URL("../src/settings-page/main.tsx", import.meta.url), "utf8");
-  const i18nSource = await readFile(new URL("../src/side-panel/i18n/i18n-storage.ts", import.meta.url), "utf8");
+  const i18nSource = await readFile(new URL("../src/localization/catalogs.ts", import.meta.url), "utf8");
 
   assert.match(appSource, /app\.documentTitle/);
   assert.match(appSource, /debug\.exportReportDone/);
@@ -119,11 +119,11 @@ test("interface titles, hints, placeholders, and panel chrome are localized", as
 
 test("theme and language defaults follow the browser", async () => {
   const themeSource = await readFile(new URL("../src/side-panel/settings/theme-storage.ts", import.meta.url), "utf8");
-  const i18nSource = await readFile(new URL("../src/side-panel/i18n/i18n-storage.ts", import.meta.url), "utf8");
+  const localizationSource = await readFile(new URL("../src/localization/index.ts", import.meta.url), "utf8");
   const settingsSource = await readFile(new URL("../src/settings-page/main.tsx", import.meta.url), "utf8");
 
   assert.match(themeSource, /DEFAULT_THEME:\s*ThemeMode\s*=\s*"browser"/);
-  assert.match(i18nSource, /DEFAULT_LANGUAGE:\s*LanguageMode\s*=\s*"browser"/);
+  assert.match(localizationSource, /DEFAULT_LANGUAGE:\s*LanguageMode\s*=\s*"browser"/);
   assert.match(settingsSource, /settings\.theme\.browser/);
   assert.match(settingsSource, /settings\.language\.browser/);
 });
@@ -131,7 +131,7 @@ test("theme and language defaults follow the browser", async () => {
 test("system-adjacent file and status messages are localized", async () => {
   const canvasSource = await readFile(new URL("../src/side-panel/graph/TurnMapCanvas.tsx", import.meta.url), "utf8");
   const settingsSource = await readFile(new URL("../src/settings-page/main.tsx", import.meta.url), "utf8");
-  const i18nSource = await readFile(new URL("../src/side-panel/i18n/i18n-storage.ts", import.meta.url), "utf8");
+  const i18nSource = await readFile(new URL("../src/localization/catalogs.ts", import.meta.url), "utf8");
 
   for (const key of [
     "file.exported",
@@ -169,7 +169,7 @@ test("system-adjacent file and status messages are localized", async () => {
 
 test("topic analysis action and status copy are localized", async () => {
   const canvasSource = await readFile(new URL("../src/side-panel/graph/TurnMapCanvas.tsx", import.meta.url), "utf8");
-  const i18nSource = await readFile(new URL("../src/side-panel/i18n/i18n-storage.ts", import.meta.url), "utf8");
+  const i18nSource = await readFile(new URL("../src/localization/catalogs.ts", import.meta.url), "utf8");
 
   for (const key of [
     "toolbar.analyzeTopics",
@@ -192,7 +192,7 @@ test("topic analysis action and status copy are localized", async () => {
 
 test("link suggestion review panel keeps overflow candidates scrollable", async () => {
   const stylesSource = await readFile(new URL("../src/side-panel/styles.css", import.meta.url), "utf8");
-  const i18nSource = await readFile(new URL("../src/side-panel/i18n/i18n-storage.ts", import.meta.url), "utf8");
+  const i18nSource = await readFile(new URL("../src/localization/catalogs.ts", import.meta.url), "utf8");
 
   assert.match(stylesSource, /\.suggestion-panel\s*\{[^}]*grid-template-rows:\s*auto minmax\(0,\s*1fr\)/s);
   assert.match(stylesSource, /\.suggestion-list\s*\{[^}]*min-height:\s*0/s);
@@ -205,7 +205,7 @@ test("link suggestion review panel keeps overflow candidates scrollable", async 
 test("edge weight and graph health copy are localized", async () => {
   const canvasSource = await readFile(new URL("../src/side-panel/graph/TurnMapCanvas.tsx", import.meta.url), "utf8");
   const taskLogSource = await readFile(new URL("../src/side-panel/task-log.ts", import.meta.url), "utf8");
-  const i18nSource = await readFile(new URL("../src/side-panel/i18n/i18n-storage.ts", import.meta.url), "utf8");
+  const i18nSource = await readFile(new URL("../src/localization/catalogs.ts", import.meta.url), "utf8");
 
   for (const key of ["action.edgeWeight", "task.graphHealthDone"]) {
     assert.match(i18nSource, new RegExp(`"${key}":`));
@@ -223,7 +223,7 @@ test("link connection style setting is localized and defaults to curved edges", 
   const settingsSource = await readFile(new URL("../src/settings-page/main.tsx", import.meta.url), "utf8");
   const uiSettingsSource = await readFile(new URL("../src/side-panel/settings/ui-settings-storage.ts", import.meta.url), "utf8");
   const canvasSource = await readFile(new URL("../src/side-panel/graph/TurnMapCanvas.tsx", import.meta.url), "utf8");
-  const i18nSource = await readFile(new URL("../src/side-panel/i18n/i18n-storage.ts", import.meta.url), "utf8");
+  const i18nSource = await readFile(new URL("../src/localization/catalogs.ts", import.meta.url), "utf8");
 
   for (const key of [
     "settings.linkConnectionStyle",
@@ -250,7 +250,7 @@ test("interface settings expose default node size controls and canvas uses them"
   const settingsSource = await readFile(new URL("../src/settings-page/main.tsx", import.meta.url), "utf8");
   const uiSettingsSource = await readFile(new URL("../src/side-panel/settings/ui-settings-storage.ts", import.meta.url), "utf8");
   const canvasSource = await readFile(new URL("../src/side-panel/graph/TurnMapCanvas.tsx", import.meta.url), "utf8");
-  const i18nSource = await readFile(new URL("../src/side-panel/i18n/i18n-storage.ts", import.meta.url), "utf8");
+  const i18nSource = await readFile(new URL("../src/localization/catalogs.ts", import.meta.url), "utf8");
 
   for (const key of [
     "settings.defaultNodeSize",
@@ -277,7 +277,7 @@ test("interface settings expose default node size controls and canvas uses them"
 test("settings page groups controls by target object", async () => {
   const settingsSource = await readFile(new URL("../src/settings-page/main.tsx", import.meta.url), "utf8");
   const stylesSource = await readFile(new URL("../src/settings-page/settings-page.css", import.meta.url), "utf8");
-  const i18nSource = await readFile(new URL("../src/side-panel/i18n/i18n-storage.ts", import.meta.url), "utf8");
+  const i18nSource = await readFile(new URL("../src/localization/catalogs.ts", import.meta.url), "utf8");
 
   for (const key of [
     "settings.group.appearance",
@@ -320,7 +320,7 @@ test("retired scrolling and fallback-search settings are absent from active UI a
   const settingsSource = await readFile(new URL("../src/settings-page/main.tsx", import.meta.url), "utf8");
   const jumpSource = await readFile(new URL("../src/content/jump-controller.ts", import.meta.url), "utf8");
   const webAdapterSource = await readFile(new URL("../src/content/web-adapter-core.ts", import.meta.url), "utf8");
-  const i18nSource = await readFile(new URL("../src/side-panel/i18n/i18n-storage.ts", import.meta.url), "utf8");
+  const i18nSource = await readFile(new URL("../src/localization/catalogs.ts", import.meta.url), "utf8");
   const appSource = await readFile(new URL("../src/side-panel/App.tsx", import.meta.url), "utf8");
   const debugReportSource = await readFile(new URL("../src/side-panel/debug-report.ts", import.meta.url), "utf8");
   const turnMergeSource = await readFile(new URL("../src/side-panel/turn-merge.ts", import.meta.url), "utf8");
@@ -448,7 +448,7 @@ test("nodes use side connection handles with resize blind zones near handles", a
 test("node panel keeps theme color in the swatch row and exposes reset actions", async () => {
   const canvasSource = await readFile(new URL("../src/side-panel/graph/TurnMapCanvas.tsx", import.meta.url), "utf8");
   const stylesSource = await readFile(new URL("../src/side-panel/styles.css", import.meta.url), "utf8");
-  const i18nSource = await readFile(new URL("../src/side-panel/i18n/i18n-storage.ts", import.meta.url), "utf8");
+  const i18nSource = await readFile(new URL("../src/localization/catalogs.ts", import.meta.url), "utf8");
 
   assert.match(i18nSource, /"action\.expandAnswer": "Generate Mini Map"/);
   assert.match(i18nSource, /"action\.expandAnswer": "生成迷你导图"/);
@@ -499,7 +499,7 @@ test("layout and color controls use themed menu and persistent swatches", async 
 
 test("link suggestion progress and review actions are visible in the status bar", async () => {
   const canvasSource = await readFile(new URL("../src/side-panel/graph/TurnMapCanvas.tsx", import.meta.url), "utf8");
-  const i18nSource = await readFile(new URL("../src/side-panel/i18n/i18n-storage.ts", import.meta.url), "utf8");
+  const i18nSource = await readFile(new URL("../src/localization/catalogs.ts", import.meta.url), "utf8");
 
   for (const key of [
     "task.suggestLinksRequesting",

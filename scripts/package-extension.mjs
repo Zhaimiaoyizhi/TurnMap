@@ -73,17 +73,7 @@ async function main() {
   assertArrayContainsAll(
     manifest.host_permissions,
     [
-      "https://chatgpt.com/*",
       "https://chatgpt.com/backend-api/*",
-      "https://chat.deepseek.com/*",
-      "https://www.kimi.com/*",
-      "https://kimi.com/*",
-      "https://doubao.com/*",
-      "https://chat.qwen.ai/*",
-      "https://gemini.google.com/*",
-      "https://claude.ai/*",
-      "https://perplexity.ai/*",
-      "https://grok.com/*",
       "https://api.openai.com/*",
       "https://api.deepseek.com/*",
       "https://openrouter.ai/*",
@@ -95,6 +85,11 @@ async function main() {
     ],
     "Manifest host_permissions"
   );
+  const contentScriptMatches = (manifest.content_scripts ?? []).flatMap((entry) => entry.matches ?? []);
+  assertArrayContainsAll(manifest.host_permissions, contentScriptMatches, "Built-in site host permissions");
+  for (const resource of manifest.web_accessible_resources ?? []) {
+    assertArrayContainsAll(resource.matches ?? [], contentScriptMatches, "Web-accessible site matches");
+  }
   assertArrayContainsAll(
     manifest.optional_host_permissions,
     ["https://*/*", "http://localhost/*", "http://127.0.0.1/*"],
@@ -153,7 +148,7 @@ async function main() {
     `Unpacked QA folder: ${unpackedDir}`,
     "",
     "Load unpacked for local QA:",
-    "1. Open edge://extensions",
+    "1. Open chrome://extensions (Chrome) or edge://extensions (Edge)",
     "2. Enable Developer mode",
     `3. Load unpacked: ${distDir}`,
     "",

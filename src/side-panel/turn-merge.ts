@@ -6,7 +6,11 @@ export type TurnUpdateMode = "replace" | "refresh" | "refresh-index";
 const EMPTY_ASSISTANT_REPLY = "No text response";
 
 function sameTurn(left: Turn, right: Turn): boolean {
-  return left.id === right.id || sourceAnchorMatches(left.sourceAnchor, right.sourceAnchor);
+  const sameNavigationIdentity =
+    Boolean(left.navigation?.navigationId) &&
+    left.navigation?.site === right.navigation?.site &&
+    left.navigation?.navigationId === right.navigation?.navigationId;
+  return sameNavigationIdentity || left.id === right.id || sourceAnchorMatches(left.sourceAnchor, right.sourceAnchor);
 }
 
 function findTurnIndex(turns: Turn[], target: Turn): number {

@@ -273,7 +273,9 @@ test("content script can repair missing launcher after a previous partial start"
   assert.match(source, /launcherNeedsRepair/);
   assert.match(source, /!document\.querySelector\("\.turnmap-launcher"\)/);
   assert.match(source, /!document\.getElementById\("turnmap-launcher-style"\)/);
-  assert.match(source, /__chatMapContentMessageListenerStarted/);
+  assert.match(source, /startContentPhase\(contentLifecycle, "messages"/);
+  assert.match(source, /startContentPhase\(contentLifecycle, "observer"/);
+  assert.doesNotMatch(source, /__chatMapContent[A-Za-z]+Started/);
   assert.match(source, /startTurnMapContentMessageListener\(\)/);
 });
 
@@ -1199,7 +1201,8 @@ test("floating navigator opens from launcher hover and uses the main jump route"
   assert.doesNotMatch(renderBody, /positionFloatingNavigatorNearLauncher\(\)/);
   assert.doesNotMatch(renderBody, /getCurrentAdapter\(\)\?\.jumpToTurn/);
   assert.doesNotMatch(renderBody, /refreshLatestTurns|refreshCompleteTurns|harvestTurnsByScrolling/);
-  assert.match(messageBody, /performJumpToTurn\(message as JumpToTurnMessage\)/);
+  assert.match(messageBody, /performJumpToTurn\(message\)/);
+  assert.doesNotMatch(messageBody, /as JumpToTurnMessage/);
 });
 
 test("floating navigator keeps its own scroll position across turn refresh renders", () => {

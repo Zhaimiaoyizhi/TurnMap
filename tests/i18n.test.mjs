@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 test("built-in Chinese translations are readable text, not replacement question marks", async () => {
-  const source = await readFile(new URL("../src/side-panel/i18n/i18n-storage.ts", import.meta.url), "utf8");
+  const source = await readFile(new URL("../src/localization/catalogs.ts", import.meta.url), "utf8");
   const zhBlock = source.slice(source.indexOf("export const ZH_TRANSLATIONS"));
   const keySamples = [
     "app.kicker",
@@ -28,7 +28,7 @@ test("built-in Chinese translations are readable text, not replacement question 
 });
 
 test("custom AI translation interface remains an overlay on built-in labels", async () => {
-  const source = await readFile(new URL("../src/side-panel/i18n/i18n-storage.ts", import.meta.url), "utf8");
+  const source = await readFile(new URL("../src/localization/index.ts", import.meta.url), "utf8");
 
   assert.match(source, /export async function generateCustomLanguage/);
   assert.match(source, /CUSTOM_LANGUAGES_STORAGE_KEY/);
