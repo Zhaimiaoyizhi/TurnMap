@@ -12,7 +12,7 @@
     { "siteId": "claude", "qaStatus": "blocked-access", "report": "claude-2026-07-12.md" },
     { "siteId": "perplexity", "qaStatus": "blocked-access", "report": "perplexity-2026-07-12.md" },
     { "siteId": "grok", "qaStatus": "blocked-auth", "report": "grok-2026-07-12.md", "implementation": "native-index-evidence-gated" },
-    { "siteId": "glm", "qaStatus": "smoke-verified", "report": "glm-2026-07-12.md" },
+    { "siteId": "glm", "qaStatus": "smoke-verified", "report": "glm-2026-07-12.md", "implementation": "variant-split-native-index-evidence-gated" },
     { "siteId": "mistral", "qaStatus": "blocked-access", "report": "mistral-2026-07-12.md" },
     { "siteId": "arena", "qaStatus": "blocked-access", "report": "arena-2026-07-12.md" }
   ]

@@ -70,3 +70,16 @@ test("capabilities derived from evidence preserve limitations without mutable sh
   first.limitations.push("mutated by caller");
   assert.doesNotMatch(second.limitations.join(" "), /mutated by caller/);
 });
+
+test("GLM capability evidence keeps ChatGLM and Z.ai verification boundaries separate", async () => {
+  const { BUILT_IN_NATIVE_CAPABILITY_RECORDS } = await loadRegistry();
+  const glmRecord = BUILT_IN_NATIVE_CAPABILITY_RECORDS.find((record) => record.siteId === "glm");
+
+  assert.ok(glmRecord);
+  assert.equal(glmRecord.qaStatus, "smoke-verified");
+  assert.equal(glmRecord.userIndex, "mounted-dom");
+  assert.equal(glmRecord.directJump, "mounted-only");
+  assert.match(glmRecord.limitations.join(" "), /ChatGLM/i);
+  assert.match(glmRecord.limitations.join(" "), /Z\.ai/i);
+  assert.match(glmRecord.limitations.join(" "), /slider|verification|blocked/i);
+});

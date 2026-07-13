@@ -98,6 +98,12 @@ const manifest: Manifest = {
       world: "MAIN"
     },
     {
+      matches: ["https://chat.z.ai/*", "https://z.ai/*"],
+      js: ["glm-conversation-observer.js"],
+      run_at: "document_start",
+      world: "MAIN"
+    },
+    {
       matches: BUILT_IN_CONTENT_MATCHES,
       js: ["content/index.js"],
       run_at: "document_idle"

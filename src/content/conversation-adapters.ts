@@ -60,6 +60,15 @@ import {
   startGrokNativeObserver
 } from "./grok-native-navigation";
 import {
+  findMountedGlmMessageElement,
+  glmConversationIdFromUrl,
+  glmNativeIndex,
+  glmVariantFromUrl,
+  mergeGlmNativeTurns,
+  navigateGlmTarget,
+  startGlmNativeObserver
+} from "./glm-native-navigation";
+import {
   bindClaudeNativeTurns,
   claudeConversationIdFromUrl,
   claudeNativeIndex,
@@ -1155,8 +1164,8 @@ const webProfiles: WebConversationProfile[] = [
   },
   {
     ...sharedWebSelectors,
-    site: siteById("glm"),
-    titleSuffixPattern: /\s*[-|]\s*(智谱清言|ChatGLM|Z\.ai|GLM).*$/i,
+    site: { ...siteById("glm"), hostPatterns: ["chatglm.cn", "www.chatglm.cn"] },
+    titleSuffixPattern: /\s*[-|]\s*(智谱清言|ChatGLM).*$/i,
     titleFromFirstUserMessage: true,
     titleSelectors: [
       ".conversation-title",
@@ -1180,8 +1189,6 @@ const webProfiles: WebConversationProfile[] = [
     titleBlocklistPatterns: [
       /^智谱清言$/i,
       /^ChatGLM$/i,
-      /^Z\.ai$/i,
-      /^GLM$/i,
       /^New chat$/i,
       /^新建对话$/,
       /^开启新对话$/,
@@ -1191,35 +1198,20 @@ const webProfiles: WebConversationProfile[] = [
     ],
     userSelectors: [
       ".detail .item .question",
-      ".detail .item .question .question-txt",
-      ".user-message",
-      ".chat-user",
-      "[data-role='user']",
-      "[data-author='user']",
-      "[class*='user-message' i]"
+      ".detail .item .question .question-txt"
     ],
     assistantSelectors: [
       ".detail .item .answer",
       ".detail .item .answer .panel",
-      ".detail .item .answer .panel .printing",
-      ".chat-assistant",
-      ".chat-assistant.markdown-prose",
-      "[data-role='assistant']",
-      "[data-author='assistant']",
-      "[class*='assistant-message' i]"
+      ".detail .item .answer .panel .printing"
     ],
-    messageRootSelector:
-      ".detail .item .question, .detail .item .answer, #messages-container .user-message, #messages-container .chat-user, #messages-container .chat-assistant, #messages-container [id^='message-'][id$='-start']",
+    messageRootSelector: ".detail .item .question, .detail .item .answer",
     textSelectors: [
       ".question-txt span",
       ".question-txt",
       ".answer .panel .printing",
       ".answer .panel",
       ".answer .markdown-body",
-      ".whitespace-pre-wrap",
-      ".markdown-prose",
-      ".chat-user",
-      ".chat-assistant",
       ".markdown-body",
       "p",
       "li",
@@ -1227,7 +1219,7 @@ const webProfiles: WebConversationProfile[] = [
       "pre",
       "code"
     ],
-    scrollContainerSelectors: [".detail .session-block", ".session-block", "#sessioncontent", "#messages-container", "#chat-container"],
+    scrollContainerSelectors: [".detail .session-block", ".session-block", "#sessioncontent"],
     roleMessageRootSelectors: [
       {
         selector: ".detail .item .question, .detail .item .answer",
@@ -1235,16 +1227,6 @@ const webProfiles: WebConversationProfile[] = [
         assistantMarkerSelectors: [".answer", ".panel", ".printing"],
         userContentSelectors: [".question-txt span", ".question-txt"],
         assistantContentSelectors: [".panel .printing", ".panel", ".markdown-body", "p", "pre", "code"]
-      },
-      {
-        selector: "#messages-container .user-message, #messages-container .chat-user",
-        userMarkerSelectors: [".user-message", ".chat-user"],
-        userContentSelectors: [".whitespace-pre-wrap", ".chat-user", ".user-message", "p", "pre", "code"]
-      },
-      {
-        selector: "#messages-container .chat-assistant",
-        assistantMarkerSelectors: [".chat-assistant"],
-        assistantContentSelectors: [".markdown-prose", ".chat-assistant", "p", "pre", "code"]
       }
     ],
     roleMessageSelectors: [
@@ -1257,16 +1239,6 @@ const webProfiles: WebConversationProfile[] = [
         role: "assistant",
         selector: ".detail .item .answer",
         contentSelectors: [".panel .printing", ".panel", ".markdown-body", "p", "pre", "code"]
-      },
-      {
-        role: "user",
-        selector: "#messages-container .user-message, #messages-container .chat-user",
-        contentSelectors: [".whitespace-pre-wrap", ".chat-user", ".user-message", "p", "pre", "code"]
-      },
-      {
-        role: "assistant",
-        selector: "#messages-container .chat-assistant",
-        contentSelectors: [".markdown-prose", ".chat-assistant", "p", "pre", "code"]
       }
     ],
     excludeSelectors: [
@@ -1324,6 +1296,120 @@ const webProfiles: WebConversationProfile[] = [
         /^重命名/,
         /^删除对话$/,
         /(复制|重新生成|编辑|分享|批量操作|重命名|删除对话|理解用户请求)/
+      ]
+    },
+    cleanText(text, role) {
+      return cleanGlmConversationText(text, role);
+    }
+  },
+  {
+    ...sharedWebSelectors,
+    site: { ...siteById("glm"), hostPatterns: ["chat.z.ai", "z.ai"] },
+    messageIdAttributes: ["id"],
+    messageIdAncestorSelector: "#messages-container [id^='message-']:not([id$='-start'])",
+    titleSuffixPattern: /\s*[-|]\s*(Z\.ai|GLM).*$/i,
+    titleFromFirstUserMessage: true,
+    titleSelectors: [
+      "[class*='conversation-title' i]",
+      "[class*='chat-title' i]",
+      "[aria-current='page']",
+      "[aria-current='page'] [class*='title' i]",
+      "[aria-selected='true']",
+      "[aria-selected='true'] [class*='title' i]",
+      "header h1",
+      "main h1"
+    ],
+    titleBlocklistPatterns: [
+      /^Z\.ai$/i,
+      /^GLM$/i,
+      /^New chat$/i,
+      /^新聊天$/,
+      /^新建对话$/,
+      /^登录$/
+    ],
+    userSelectors: [
+      "#messages-container .user-message",
+      "#messages-container .chat-user"
+    ],
+    assistantSelectors: [
+      "#messages-container .chat-assistant",
+      "#messages-container .chat-assistant.markdown-prose"
+    ],
+    messageRootSelector:
+      "#messages-container .user-message, #messages-container .chat-user, #messages-container .chat-assistant",
+    textSelectors: [
+      ".whitespace-pre-wrap",
+      ".markdown-prose",
+      ".chat-user",
+      ".chat-assistant",
+      ".markdown-body",
+      "p",
+      "li",
+      "span",
+      "pre",
+      "code"
+    ],
+    scrollContainerSelectors: ["#messages-container", "#chat-container"],
+    roleMessageRootSelectors: [
+      {
+        selector: "#messages-container .user-message, #messages-container .chat-user",
+        userMarkerSelectors: [".user-message", ".chat-user"],
+        userContentSelectors: [".whitespace-pre-wrap", ".chat-user", ".user-message", "p", "pre", "code"]
+      },
+      {
+        selector: "#messages-container .chat-assistant",
+        assistantMarkerSelectors: [".chat-assistant"],
+        assistantContentSelectors: [".markdown-prose", ".chat-assistant", "p", "pre", "code"]
+      }
+    ],
+    roleMessageSelectors: [
+      {
+        role: "user",
+        selector: "#messages-container .user-message, #messages-container .chat-user",
+        contentSelectors: [".whitespace-pre-wrap", ".chat-user", ".user-message", "p", "pre", "code"]
+      },
+      {
+        role: "assistant",
+        selector: "#messages-container .chat-assistant",
+        contentSelectors: [".markdown-prose", ".chat-assistant", "p", "pre", "code"]
+      }
+    ],
+    excludeSelectors: [
+      ...sharedWebSelectors.excludeSelectors,
+      ".messageInputContainer",
+      ".toolsView",
+      ".mcpSidePanel",
+      "[class*='thinking' i]",
+      "[class*='reasoning' i]",
+      "[class*='operation' i]",
+      "[class*='toolbar' i]",
+      "[class*='actions' i]",
+      "[class*='input' i]",
+      "[class*='composer' i]"
+    ],
+    roleExtraction: {
+      excludeAncestorSelectors: [
+        ".messageInputContainer",
+        ".toolsView",
+        ".mcpSidePanel",
+        "[class*='thinking' i]",
+        "[class*='reasoning' i]",
+        "[class*='operation' i]",
+        "[class*='sidebar' i]",
+        "[class*='history' i]",
+        "[class*='composer' i]",
+        "[class*='input' i]"
+      ],
+      actionTextPatterns: [
+        /^Copy$/i,
+        /^Regenerate$/i,
+        /^Edit$/i,
+        /^Share$/i,
+        /^复制$/,
+        /^重新生成$/,
+        /^编辑$/,
+        /^分享$/,
+        /(复制|重新生成|编辑|分享|理解用户请求|调用工具|整理答案)/
       ]
     },
     cleanText(text, role) {
@@ -2399,6 +2485,139 @@ function createQwenAdapter(
   };
 }
 
+function createGlmAdapter(
+  profile: WebConversationProfile,
+  capabilities: NativeConversationCapabilities = capabilitiesForBuiltInSite("glm")
+): ConversationAdapter {
+  let latestTurns: Turn[] = [];
+  let latestConversationId = "";
+  let observer: MutationObserver | null = null;
+  let debounceTimer: number | null = null;
+  let lastHarvestMeta: HarvestMeta | undefined;
+
+  const resetCacheForConversation = () => {
+    const conversationId = getWebConversationId(profile);
+    const variant = glmVariantFromUrl(window.location.href);
+    const nativeConversationId = glmConversationIdFromUrl(window.location.href);
+    if (variant) {
+      glmNativeIndex.activate({
+        variant,
+        host: window.location.hostname.toLowerCase(),
+        conversationId: variant === "z-ai" ? nativeConversationId : conversationId
+      });
+    }
+    if (conversationId !== latestConversationId) {
+      latestConversationId = conversationId;
+      latestTurns = [];
+      lastHarvestMeta = undefined;
+    }
+  };
+
+  const readMountedTurns = () => attachNativeWebNavigation(extractTurnsFromDocument(profile), profile.site.id);
+
+  const readCurrentTurns = () => {
+    const mountedTurns = readMountedTurns();
+    if (glmVariantFromUrl(window.location.href) !== "z-ai") return mountedTurns;
+    const nativeTurns = glmNativeIndex.getActiveTurns();
+    return nativeTurns.length > 0 ? mergeGlmNativeTurns(nativeTurns, mountedTurns) : mountedTurns;
+  };
+
+  const refresh = async () => {
+    resetCacheForConversation();
+    const currentTurns = readCurrentTurns();
+    latestTurns = glmNativeIndex.getActiveTurns().length > 0
+      ? currentTurns
+      : mergeNativeWebTurns(latestTurns, currentTurns);
+    lastHarvestMeta = {
+      attempted: false,
+      source: glmNativeIndex.getActiveTurns().length > 0 ? "conversation-api" : "native-navigation",
+      scrollContainer: "document",
+      scrollHeight: document.documentElement.scrollHeight,
+      clientHeight: document.documentElement.clientHeight,
+      scannedSteps: 0,
+      diagnostics: getLastWebExtractionDiagnostics(profile)
+    };
+    return latestTurns;
+  };
+
+  const schedule = (listener: TurnsListener) => {
+    if (debounceTimer) window.clearTimeout(debounceTimer);
+    debounceTimer = window.setTimeout(() => {
+      void refresh().then((turns) => {
+        if (turns.length === 0 && profile.suppressEmptyObserverRefresh) return;
+        listener(turns);
+      });
+    }, 350);
+  };
+
+  return {
+    site: profile.site,
+    capabilities,
+    detectSite(url) {
+      return siteMatchesUrl(profile.site, url);
+    },
+    getLatestTurns() {
+      resetCacheForConversation();
+      if (latestTurns.length === 0) latestTurns = mergeNativeWebTurns([], readCurrentTurns());
+      return latestTurns;
+    },
+    refreshLatestTurns: refresh,
+    refreshCompleteTurns: refresh,
+    harvestTurnsByScrolling: refresh,
+    async jumpToTurn(target) {
+      if (!target.navigation) {
+        return { ok: false, reason: "This GLM / Z.ai turn has no native navigation identity." };
+      }
+      resetCacheForConversation();
+      if (!target.navigation.navigationId.startsWith("glm-turn:")) {
+        return resolveNativeWebTarget(target.navigation, profile);
+      }
+      const variant = glmVariantFromUrl(window.location.href);
+      if (!variant) return { ok: false, reason: "The current page is not a recognized GLM variant." };
+      return navigateGlmTarget(target.navigation, {
+        currentVariant: variant,
+        currentHost: window.location.hostname.toLowerCase(),
+        currentConversationId: variant === "z-ai"
+          ? glmConversationIdFromUrl(window.location.href)
+          : getWebConversationId(profile),
+        findMounted: findMountedGlmMessageElement,
+        reveal(element) {
+          revealWebTurnElement(element, getWebChatScrollElement(profile));
+        }
+      });
+    },
+    startObserver(listener) {
+      if (!observer) {
+        observer = new MutationObserver(() => schedule(listener));
+        observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+      }
+      resetCacheForConversation();
+      if (glmVariantFromUrl(window.location.href) === "z-ai") {
+        startGlmNativeObserver(() => schedule(listener));
+      }
+      schedule(listener);
+    },
+    toTurnsMessage(turns) {
+      return {
+        type: "TURNMAP_TURNS_UPDATED",
+        turns,
+        conversationTitle: getWebConversationTitle(profile),
+        conversationId: getWebConversationId(profile),
+        site: profile.site,
+        harvestMeta: lastHarvestMeta ?? {
+          attempted: false,
+          source: glmNativeIndex.getActiveTurns().length > 0 ? "conversation-api" : "native-navigation",
+          scrollContainer: "document",
+          scrollHeight: document.documentElement.scrollHeight,
+          clientHeight: document.documentElement.clientHeight,
+          scannedSteps: 0,
+          diagnostics: getLastWebExtractionDiagnostics(profile)
+        }
+      };
+    }
+  };
+}
+
 function createDeepSeekAdapter(
   profile: WebConversationProfile,
   capabilities: NativeConversationCapabilities = capabilitiesForBuiltInSite("deepseek")
@@ -2786,7 +3005,9 @@ const webAdapters = webProfiles.map((profile) =>
           ? createClaudeAdapter(profile)
           : profile.site.id === "grok"
             ? createGrokAdapter(profile)
-            : createWebAdapter(profile)
+            : profile.site.id === "glm"
+              ? createGlmAdapter(profile)
+              : createWebAdapter(profile)
 );
 
 export const conversationAdapters: ConversationAdapter[] = [chatGptAdapter, ...webAdapters];

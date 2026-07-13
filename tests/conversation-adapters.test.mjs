@@ -737,31 +737,35 @@ test("Claude profile reads conversation titles before generic Claude page titles
   assert.equal(title, "整理 Claude 项目标题提取问题");
 });
 
-test("GLM profile recognizes ChatGLM and Z.ai Open WebUI message structure", () => {
+test("GLM profiles keep ChatGLM and Z.ai message structures host-scoped", () => {
   const source = readFileSync(new URL("../src/content/conversation-adapters.ts", import.meta.url), "utf8");
-  const start = source.indexOf('site: siteById("glm")');
-  const end = source.indexOf("];", start);
-  const profile = source.slice(start, end);
+  const chatGlmStart = source.indexOf('hostPatterns: ["chatglm.cn", "www.chatglm.cn"]');
+  const zAiStart = source.indexOf('hostPatterns: ["chat.z.ai", "z.ai"]');
+  const mistralStart = source.indexOf('site: siteById("mistral")');
+  const chatGlmProfile = source.slice(chatGlmStart, zAiStart);
+  const zAiProfile = source.slice(zAiStart, mistralStart);
 
-  assert.match(profile, /site:\s*siteById\("glm"\)/);
-  assert.match(profile, /\.detail \.session-block/);
-  assert.match(profile, /\.detail \.item \.question/);
-  assert.match(profile, /\.question-txt/);
-  assert.match(profile, /\.detail \.item \.answer/);
-  assert.match(profile, /\.panel \.printing/);
-  assert.match(profile, /#messages-container/);
-  assert.match(profile, /\.user-message/);
-  assert.match(profile, /\.chat-user/);
-  assert.match(profile, /\.chat-assistant/);
-  assert.match(profile, /\.markdown-prose/);
-  assert.match(profile, /messageInputContainer/);
-  assert.match(profile, /toolsView/);
+  assert.match(chatGlmProfile, /\.detail \.session-block/);
+  assert.match(chatGlmProfile, /\.detail \.item \.question/);
+  assert.match(chatGlmProfile, /\.question-txt/);
+  assert.match(chatGlmProfile, /\.detail \.item \.answer/);
+  assert.match(chatGlmProfile, /\.panel \.printing/);
+  assert.doesNotMatch(chatGlmProfile, /#messages-container|\.chat-assistant/);
+
+  assert.match(zAiProfile, /#messages-container/);
+  assert.match(zAiProfile, /\.user-message/);
+  assert.match(zAiProfile, /\.chat-user/);
+  assert.match(zAiProfile, /\.chat-assistant/);
+  assert.match(zAiProfile, /\.markdown-prose/);
+  assert.match(zAiProfile, /messageInputContainer/);
+  assert.match(zAiProfile, /toolsView/);
+  assert.doesNotMatch(zAiProfile, /\.detail \.item|\.question-txt|\.panel \.printing/);
 });
 
 test("GLM profile reads current chat titles before generic page titles", () => {
   const source = readFileSync(new URL("../src/content/conversation-adapters.ts", import.meta.url), "utf8");
-  const start = source.indexOf('site: siteById("glm")');
-  const end = source.indexOf("];", start);
+  const start = source.indexOf('hostPatterns: ["chatglm.cn", "www.chatglm.cn"]');
+  const end = source.indexOf('hostPatterns: ["chat.z.ai", "z.ai"]');
   const profile = source.slice(start, end);
   const title = conversationTitleFromCandidates(
     {
@@ -783,8 +787,8 @@ test("GLM profile reads current chat titles before generic page titles", () => {
 
 test("GLM profile ignores sidebar chrome and falls back to the first user message", () => {
   const source = readFileSync(new URL("../src/content/conversation-adapters.ts", import.meta.url), "utf8");
-  const start = source.indexOf('site: siteById("glm")');
-  const end = source.indexOf("];", start);
+  const start = source.indexOf('hostPatterns: ["chatglm.cn", "www.chatglm.cn"]');
+  const end = source.indexOf('hostPatterns: ["chat.z.ai", "z.ai"]');
   const profile = source.slice(start, end);
   const title = conversationTitleFromCandidates(
     {
@@ -826,14 +830,14 @@ test("GLM profile strips conversation action text from selected history titles",
 
 test("GLM profile removes hidden operation planning text from assistant answers", () => {
   const source = readFileSync(new URL("../src/content/conversation-adapters.ts", import.meta.url), "utf8");
-  const start = source.indexOf('site: siteById("glm")');
-  const end = source.indexOf("];", start);
+  const start = source.indexOf('hostPatterns: ["chat.z.ai", "z.ai"]');
+  const end = source.indexOf('site: siteById("mistral")');
   const profile = source.slice(start, end);
 
   assert.match(source, /function cleanGlmConversationText/);
   assert.match(profile, /cleanGlmConversationText\(text, role\)/);
   assert.match(profile, /理解用户请求/);
-  assert.match(profile, /批量操作/);
+  assert.match(profile, /调用工具/);
 });
 
 test("Mistral profile recognizes Le Chat message and markdown boundaries", () => {
