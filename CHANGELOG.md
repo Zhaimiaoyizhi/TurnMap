@@ -2,7 +2,7 @@
 
 All notable changes to TurnMap will be documented in this file.
 
-## [Unreleased]
+## [0.9.0] - Gemini Silent Native Navigation
 
 ### Added
 
@@ -12,6 +12,7 @@ All notable changes to TurnMap will be documented in this file.
 
 - Gemini now prefers the native conversation index for complete history extraction and uses deterministic ordered DOM binding for mounted turns. Repeated prompt text is resolved by native identity and position, never by similarity guessing.
 - Gemini direct navigation now reveals only a deterministically bound mounted target and otherwise fails safely without extraction scrolling or text-search fallback.
+- Updated package, extension, permission-review, and local preview metadata to `0.9.0`.
 
 ### Verification Boundary
 
@@ -322,7 +323,7 @@ Release notes: `docs/release-notes-0.6.0.md`.
 - GitHub/unpacked installs require manual updates.
 - Store publication requires additional icon and listing assets.
 
-## [0.9.0] - Light Tech UI Preview
+## [0.1.1-local-preview] - Light Tech UI Preview
 
 ### Changed
 
@@ -339,5 +340,5 @@ Release notes: `docs/release-notes-0.6.0.md`.
 ### Version Mapping
 
 - Former local `0.1.0` preview archive is retained as `0.8.0`.
-- Former local `0.1.1` UI preview archive is retained as `0.9.0`.
+- Former local `0.1.1` UI preview archive used the temporary package label `0.9.0`; that historical label is superseded by the current `0.9.0` release entry above.
 - Former local `0.1.2` work is now the GitHub preview release `0.1.0`.

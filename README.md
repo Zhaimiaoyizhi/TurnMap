@@ -136,7 +136,7 @@ For preview builds, download the release zip from GitHub Releases, unzip it, and
 
 GitHub/unpacked installs require manual updates. Store distribution is the right path for automatic browser-managed updates.
 
-Latest local preview package: `turnmap-v0.8.4.zip`. This build keeps ChatGPT's verified native full-index route, completes evidence-tracked identity-first mounted-DOM navigation for every other built-in adapter, removes legacy scroll/text-search behavior, and adds permission-gated selector-only custom sites. For long-term backup or transfer, export TurnMap JSON first because it preserves TurnMap-specific editing state more completely than visual formats.
+Latest local preview package: `turnmap-v0.9.0.zip`. This build keeps ChatGPT's verified native full-index route and adds Gemini's passive native conversation index with stable request/response identities, deterministic mounted-turn binding, and safe failure when a target cannot be resolved without scrolling or text guessing. Other built-in adapters retain their evidence-tracked mounted-DOM navigation, and selector-only custom sites remain permission-gated. For long-term backup or transfer, export TurnMap JSON first because it preserves TurnMap-specific editing state more completely than visual formats.
 
 ## Basic Usage
 
@@ -270,7 +270,8 @@ scripts           Build and packaging helpers
 - `0.7.1`: refine mini mind maps and appearance customization while hardening graph hygiene and automatic link reliability with stable new turn IDs, link weights, topic proxy metadata, and local repair logs.
 - `0.7.2`: stabilize 0.7.x reading, jumping, launcher startup, map switching, default node sizing, and settings layout before the next larger feature phase.
 - `0.8.0`: migrate compatibility to Chrome; Firefox is reserved for a later sidebar-specific phase.
-- `0.9.0`: public beta with 100+ node performance, overflow-safe large-map export, and cancellable AI batch jobs.
+- `0.9.0`: current local preview with Gemini passive native indexing, stable request/response identities, deterministic mounted-turn binding, and evidence-gated navigation.
+- `0.9.x`: continue public-beta hardening toward 100+ node performance, overflow-safe large-map export, and cancellable AI batch jobs.
 - `0.10.0`: prepare store publication, with Edge Add-ons first and Chrome Web Store following Chrome compatibility.
 - `1.0.0`: stable release after privacy, permissions, docs, QA, and install/recovery paths are complete.
 - `1.1.0`: experimental fine-grained graph expansion after the stable release.
