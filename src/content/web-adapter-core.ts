@@ -60,6 +60,7 @@ export type WebConversationProfile = {
   site: ConversationSite;
   conversationRootSelector?: string;
   messageIdAttributes?: string[];
+  messageIdAncestorSelector?: string;
   titleSuffixPattern?: RegExp;
   userSelectors: string[];
   assistantSelectors: string[];
@@ -602,6 +603,13 @@ function elementId(element: HTMLElement, role: ConversationBlock["role"], index:
   for (const attribute of attributes) {
     const value = element.getAttribute(attribute);
     if (value) return value;
+  }
+  if (profile.messageIdAncestorSelector) {
+    const ancestor = element.closest(profile.messageIdAncestorSelector);
+    for (const attribute of attributes) {
+      const value = ancestor?.getAttribute(attribute);
+      if (value) return value;
+    }
   }
   return `${role}-${index}-${hashText(normalizeWebText(element.textContent ?? ""))}`;
 }

@@ -2,6 +2,23 @@
 
 All notable changes to TurnMap will be documented in this file.
 
+## [Unreleased] - DeepSeek Silent Native Navigation
+
+### Added
+
+- Added a clean-room DeepSeek conversation index that passively captures `/api/v0/chat/history_messages` at `document_start`, follows the active `parent_id` chain from `current_message_id`, and assigns stable conversation/message identities to repeated prompts without scrolling the page.
+- Added a deterministic, user-triggered DeepSeek virtual-list bridge that targets the exact native message ID and revalidates the exact `[data-virtual-list-item-key]` after remount.
+
+### Changed
+
+- DeepSeek now prefers the structured active-branch history over mounted-DOM extraction, excludes `THINK` fragments from assistant answers, and merges streamed response fragments without replacing stable turn identities.
+- DeepSeek direct navigation now resolves an exact mounted message or invokes one exact native virtual-list target. Missing, wrong, or unremounted targets fail explicitly without similarity matching or scroll search.
+
+### Verification Boundary
+
+- Synthetic full-history, repeated-prompt identity, active-branch, thinking exclusion, streaming enrichment, SPA isolation, exact remount, wrong-ID, timeout, adapter-routing, and passive-capture coverage is recorded in `tests/deepseek-native-navigation.test.mjs`.
+- A real anonymous DeepSeek session and its production bundle confirmed the history schema, stable message IDs, active-parent chain, and native keyed virtual-list controller. The live page redirected to `/sign_in`, so authenticated long-conversation acceptance remains blocked and the capability registry stays `blocked-auth` at the mounted-DOM tier.
+
 ## [0.9.1] - Doubao Silent Native Navigation
 
 ### Added

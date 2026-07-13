@@ -44,6 +44,16 @@ import {
   startDoubaoNativeObserver,
   waitForMountedDoubaoMessageElement
 } from "./doubao-native-navigation";
+import {
+  bindDeepSeekNativeTurns,
+  deepSeekConversationIdFromUrl,
+  deepSeekNativeIndex,
+  findMountedDeepSeekMessageElement,
+  navigateDeepSeekTarget,
+  requestDeepSeekNativeTarget,
+  startDeepSeekNativeObserver,
+  waitForMountedDeepSeekMessageElement
+} from "./deepseek-native-navigation";
 
 export type TurnsListener = (turns: Turn[]) => void;
 type HarvestMeta = NonNullable<ExtractedTurnsMessage["harvestMeta"]>;
@@ -222,6 +232,8 @@ const webProfiles: WebConversationProfile[] = [
   {
     ...sharedWebSelectors,
     site: siteById("deepseek"),
+    messageIdAttributes: ["data-virtual-list-item-key", "data-message-id", "data-id", "id"],
+    messageIdAncestorSelector: "[data-virtual-list-item-key]",
     titleSuffixPattern: /\s*[-|]\s*DeepSeek.*$/i,
     userSelectors: [
       "[data-role='user']",
@@ -2122,8 +2134,128 @@ function createDoubaoAdapter(
   };
 }
 
+function createDeepSeekAdapter(
+  profile: WebConversationProfile,
+  capabilities: NativeConversationCapabilities = capabilitiesForBuiltInSite("deepseek")
+): ConversationAdapter {
+  let latestTurns: Turn[] = [];
+  let latestConversationId = "";
+  let observer: MutationObserver | null = null;
+  let debounceTimer: number | null = null;
+  let lastHarvestMeta: HarvestMeta | undefined;
+
+  const resetCacheForConversation = () => {
+    const conversationId = getWebConversationId(profile);
+    deepSeekNativeIndex.activate(deepSeekConversationIdFromUrl(window.location.href));
+    if (conversationId !== latestConversationId) {
+      latestConversationId = conversationId;
+      latestTurns = [];
+      lastHarvestMeta = undefined;
+    }
+  };
+
+  const readMountedTurns = () =>
+    attachNativeWebNavigation(extractTurnsFromDocument(profile), profile.site.id);
+
+  const readCurrentTurns = () => {
+    const mountedTurns = readMountedTurns();
+    const nativeTurns = deepSeekNativeIndex.getActiveTurns();
+    return nativeTurns.length > 0 ? bindDeepSeekNativeTurns(nativeTurns, mountedTurns) : mountedTurns;
+  };
+
+  const refresh = async () => {
+    resetCacheForConversation();
+    const currentTurns = readCurrentTurns();
+    latestTurns = deepSeekNativeIndex.getActiveTurns().length > 0
+      ? currentTurns
+      : mergeNativeWebTurns(latestTurns, currentTurns);
+    lastHarvestMeta = {
+      attempted: false,
+      source: deepSeekNativeIndex.getActiveTurns().length > 0 ? "conversation-api" : "native-navigation",
+      scrollContainer: "document",
+      scrollHeight: document.documentElement.scrollHeight,
+      clientHeight: document.documentElement.clientHeight,
+      scannedSteps: 0,
+      diagnostics: getLastWebExtractionDiagnostics(profile)
+    };
+    return latestTurns;
+  };
+
+  const schedule = (listener: TurnsListener) => {
+    if (debounceTimer) window.clearTimeout(debounceTimer);
+    debounceTimer = window.setTimeout(() => {
+      void refresh().then((turns) => {
+        if (turns.length === 0 && profile.suppressEmptyObserverRefresh) return;
+        listener(turns);
+      });
+    }, 350);
+  };
+
+  return {
+    site: profile.site,
+    capabilities,
+    detectSite(url) {
+      return siteMatchesUrl(profile.site, url);
+    },
+    getLatestTurns() {
+      resetCacheForConversation();
+      if (latestTurns.length === 0) latestTurns = readCurrentTurns();
+      return latestTurns;
+    },
+    refreshLatestTurns: refresh,
+    refreshCompleteTurns: refresh,
+    harvestTurnsByScrolling: refresh,
+    async jumpToTurn(target) {
+      if (!target.navigation) {
+        return { ok: false, reason: "This DeepSeek turn has no native navigation identity." };
+      }
+      resetCacheForConversation();
+      if (!target.navigation.navigationId.startsWith("deepseek-turn:")) {
+        return resolveNativeWebTarget(target.navigation, profile);
+      }
+      return navigateDeepSeekTarget(target.navigation, {
+        findMounted: findMountedDeepSeekMessageElement,
+        requestNativeTarget: requestDeepSeekNativeTarget,
+        waitForMounted: waitForMountedDeepSeekMessageElement,
+        reveal(element) {
+          revealWebTurnElement(element, getWebChatScrollElement(profile));
+        }
+      });
+    },
+    startObserver(listener) {
+      if (!observer) {
+        observer = new MutationObserver(() => schedule(listener));
+        observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+      }
+      resetCacheForConversation();
+      startDeepSeekNativeObserver(() => schedule(listener));
+      schedule(listener);
+    },
+    toTurnsMessage(turns) {
+      return {
+        type: "TURNMAP_TURNS_UPDATED",
+        turns,
+        conversationTitle: getWebConversationTitle(profile),
+        conversationId: getWebConversationId(profile),
+        site: profile.site,
+        harvestMeta: lastHarvestMeta ?? {
+          attempted: false,
+          source: deepSeekNativeIndex.getActiveTurns().length > 0 ? "conversation-api" : "native-navigation",
+          scrollContainer: "document",
+          scrollHeight: document.documentElement.scrollHeight,
+          clientHeight: document.documentElement.clientHeight,
+          scannedSteps: 0,
+          diagnostics: getLastWebExtractionDiagnostics(profile)
+        }
+      };
+    }
+  };
+}
+
 const webAdapters = webProfiles.map((profile) =>
-  profile.site.id === "gemini"
+  profile.site.id === "deepseek"
+    ? createDeepSeekAdapter(profile)
+    : profile.site.id === "gemini"
     ? createGeminiAdapter(profile)
     : profile.site.id === "doubao"
       ? createDoubaoAdapter(profile)

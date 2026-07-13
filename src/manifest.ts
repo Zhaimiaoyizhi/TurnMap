@@ -47,6 +47,12 @@ const manifest: Manifest = {
   },
   content_scripts: [
     {
+      matches: ["https://chat.deepseek.com/*"],
+      js: ["deepseek-conversation-observer.js"],
+      run_at: "document_start",
+      world: "MAIN"
+    },
+    {
       matches: ["https://doubao.com/*", "https://*.doubao.com/*"],
       js: ["doubao-conversation-observer.js"],
       run_at: "document_start",
