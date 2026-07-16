@@ -26,6 +26,9 @@ It currently maps the active conversation on supported AI websites. Cross-conver
 
 - **Long conversation map**: turn a sprawling web AI conversation into a node map you can actually scan.
 - **Jump back to source**: right-click node text to return to the original answer in the source website.
+- **Identity-first navigation**: keep repeated prompts distinct with stable site/message identities and fail safely when an exact target cannot be resolved.
+- **Floating navigator and favorites**: browse user turns from the page launcher, preserve the floating list position during refreshes, and keep favorite turns by navigation identity.
+- **Prompt Workbench**: manage reusable local prompts beside the ChatGPT composer, fill dynamic variables, optimize only the current input, and build image prompts without sending the full conversation.
 - **Answer mini mind maps**: expand one long assistant answer into a compact, title-only map inside the original node.
 - **Topic organization**: collapse selected turns into restorable topic groups and review local Topic Analysis candidates.
 - **Editable knowledge graph**: edit titles, summaries, tags, statuses, notes, hidden nodes, and relationship links.
@@ -37,6 +40,35 @@ It currently maps the active conversation on supported AI websites. Cross-conver
 - **Local-first storage**: keep graph state, UI preferences, and generated language packs in the local browser profile.
 - **Safe custom sites**: add selector-only profiles that stay disabled until exact-origin permission and an active-page preview succeed; back them up separately from maps.
 
+## Changes Since 0.7.2
+
+### Chrome Migration And ChatGPT Navigation (0.8.0–0.8.2)
+
+- Migrated the extension to Chrome/Edge Manifest V3 with a Chrome 116+ side-panel baseline, typed manifest generation, safe reinjection, and release packaging for unpacked installs.
+- Rebuilt ChatGPT long-conversation navigation as a clean-room native index with stable turn/message anchors, direct target resolution, bounded shell revive, and no legacy harvest scrolling.
+- Added the hover-triggered floating conversation navigator, then stabilized refresh behavior so the source page and floating list do not unexpectedly move.
+- Added the local Prompt Workbench beside the ChatGPT composer: reusable templates, variables, import/export, AI rewriting of the current input only, image-prompt controls, localization, and theme-aware settings.
+
+### Identity-First Multi-Site Navigation (0.8.3)
+
+- Added site-scoped navigation identities and multi-site floating navigation across the 13 built-in adapters.
+- Replaced non-ChatGPT long-distance extraction scrolling and SourceAnchor text-search jumps with non-scrolling mounted-DOM refresh, exact identity resolution, and explicit safe failure.
+- Preserved repeated prompts as separate turns, enriched streaming answers without changing identity, and added identity-backed floating favorites.
+
+### Evidence Registry And Safe Custom Sites (0.8.4)
+
+- Added a repository-backed capability registry, dated per-site QA reports, screenshots, and evidence-gated labels so DOM smoke tests cannot be presented as native support.
+- Renamed Deep Scan to Refresh Index, removed retired reading/jump controls, and kept missing-middle-turn merge behavior without searching or scrolling the page.
+- Added selector-only custom-site profiles with exact-origin permission, bounded path matching, selector validation, active-page preview, disabled-by-default storage, and separate JSON import/export.
+
+### Silent Structured Indexes (0.9.0–0.9.2)
+
+- Added passive structured indexes for Gemini, Doubao, DeepSeek, Qwen, Claude, Kimi, Grok, and Z.ai by reusing conversation responses or client state already available to each page.
+- Added stable conversation/message identities, repeated-prompt separation, active-branch handling, streaming enrichment, SPA/session isolation, and exact mounted-target validation without extraction-time scrolling.
+- Added deterministic, user-triggered native revival where the site exposes a verified controller path: DeepSeek keyed virtual items, Doubao virtual rows, and Kimi previous segments. Unsupported or mismatched targets fail without fuzzy text matching or scroll search.
+- Added site-specific correctness handling: Kimi segment/attachment aggregation, Grok prompt-echo and nested-response deduplication, Claude UUID branch handling, and host-scoped ChatGLM/Z.ai variants.
+- Integrated all eight retained high-frequency site adaptations into the `0.9.2` build while preserving the capability registry's real-browser evidence boundaries.
+
 ## Supported Site Capabilities
 
 ChatGPT is TurnMap's verified native reference route. The other built-in adapters now use the same identity-first safety rules, but remain labeled DOM fallback until long-conversation browser evidence proves a site-native full index and off-screen remount route. An ordinary DOM extraction success is not enough to claim native support.
@@ -44,16 +76,16 @@ ChatGPT is TurnMap's verified native reference route. The other built-in adapter
 | Site | Extraction tier | Jump tier | Assistant text | Known limitation |
 | --- | --- | --- | --- | --- |
 | ChatGPT | Verified native user index | Verified native direct jump + bounded shell revive | Best effort | The page may not expose every assistant answer cheaply. |
-| DeepSeek | Identity-first mounted DOM fallback | Exact mounted-identity jump | Best effort | Unmounted turns fail safely; no scroll/text search. |
-| Kimi | Identity-first mounted DOM fallback | Exact mounted-identity jump | Best effort | Unmounted turns fail safely; no scroll/text search. |
-| Doubao | Identity-first mounted DOM fallback | Exact mounted-identity jump | Best effort | Unmounted turns fail safely; no scroll/text search. |
+| DeepSeek | Evidence-gated structured history index; capability remains mounted-DOM | Exact strong-ID jump; native revive remains evidence-gated | Best effort | Authenticated long/off-screen acceptance remains blocked. |
+| Kimi | Evidence-gated paged message index; capability remains mounted-DOM | Exact strong-ID jump; native previous-segment revive remains evidence-gated | Best effort | Authenticated long/off-screen acceptance remains blocked. |
+| Doubao | Evidence-gated structured message index; capability remains mounted-DOM | Exact strong-ID jump; deterministic virtual target remains evidence-gated | Best effort | Authenticated long/off-screen acceptance remains blocked. |
 | Qwen | Evidence-gated structured index; capability remains mounted-DOM | Exact mounted strong-ID jump | Best effort | Two repeated mounted turns smoke-tested; no verified off-screen remount/native claim. |
-| Gemini | Identity-first mounted DOM fallback | Exact mounted-identity jump | Best effort | Two repeated mounted turns smoke-tested; no off-screen/native claim. |
+| Gemini | Evidence-gated structured conversation index; capability remains mounted-DOM | Exact mounted strong-ID jump | Best effort | Two repeated mounted turns smoke-tested; no off-screen/native claim. |
 | Google AI Studio | Identity-first mounted DOM fallback | Exact mounted-identity jump | Best effort | Unmounted turns fail safely; no scroll/text search. |
-| Claude | Identity-first mounted DOM fallback | Exact mounted-identity jump | Best effort | Unmounted turns fail safely; no scroll/text search. |
+| Claude | Evidence-gated structured UUID index; capability remains mounted-DOM | Exact mounted UUID jump | Best effort | Cloudflare blocked authenticated long/off-screen acceptance. |
 | Perplexity | Identity-first mounted DOM fallback | Exact mounted-identity jump | Best effort | Unmounted turns fail safely; no scroll/text search. |
-| Grok | Identity-first mounted DOM fallback | Exact mounted-identity jump | Best effort | Unmounted turns fail safely; no scroll/text search. |
-| GLM / Z.ai | Identity-first mounted DOM fallback | Exact mounted-identity jump | Best effort | One mounted turn smoke-tested; no off-screen/native claim. |
+| Grok | Evidence-gated response-graph index; capability remains mounted-DOM | Exact mounted response-ID jump | Best effort | Authenticated long/off-screen acceptance remains unavailable. |
+| GLM / Z.ai | Host-scoped variants; Z.ai structured index remains evidence-gated | Exact mounted Z.ai message-ID jump | Best effort | ChatGLM and Z.ai retain separate evidence boundaries; no native claim. |
 | Mistral Le Chat | Identity-first mounted DOM fallback | Exact mounted-identity jump | Best effort | Unmounted turns fail safely; no scroll/text search. |
 | Arena / LMArena | Identity-first mounted DOM fallback | Exact mounted-identity jump | Best effort | Battle mode reads the selected answer side; unmounted turns fail safely. |
 
@@ -101,7 +133,7 @@ The settings page keeps provider setup, prompt workbench data, safe custom-site 
 These items are planned before a wider public release:
 
 - **Update Notice**: notify users when a new GitHub Release or store version is available.
-- **More AI chat sites**: continue improving adapters for supported web AI products and add more sites as their page structures stabilize.Welcome to let me know your favourates!
+- **More AI chat sites**: continue improving adapters for supported web AI products and add more sites as their page structures stabilize. Suggestions for additional sites are welcome.
 - **More browsers**: extend compatibility beyond Chromium browsers, especially Firefox.
 - **More AI providers**: broaden API key support for more OpenAI-compatible and mainstream model providers.
 - **Stronger organization features**: improve local topic analysis, AI summaries, AI suggested links, provider compatibility, and task-log based troubleshooting.
@@ -142,7 +174,7 @@ Latest local preview package: `turnmap-v0.9.2.zip`. This integrated build keeps 
 
 1. Open a supported AI conversation.
 2. Open TurnMap.
-3. Click Refresh to read the available conversation index. ChatGPT can use its verified native full index; other sites read currently mounted turns until their native routes are verified.
+3. Click Refresh to read the available conversation index. ChatGPT uses its verified native route; supported sites may also reuse an evidence-gated structured index, while the capability table remains the source of truth for browser-verified native claims.
 4. Choose a layout: Single-side, Radial, Matrix, or Two-sided.
 5. Single-click a node to select it and use Node Actions.
 6. Right-click node body text to jump back to the source page.
@@ -270,9 +302,12 @@ scripts           Build and packaging helpers
 - `0.7.1`: refine mini mind maps and appearance customization while hardening graph hygiene and automatic link reliability with stable new turn IDs, link weights, topic proxy metadata, and local repair logs.
 - `0.7.2`: stabilize 0.7.x reading, jumping, launcher startup, map switching, default node sizing, and settings layout before the next larger feature phase.
 - `0.8.0`: migrate compatibility to Chrome; Firefox is reserved for a later sidebar-specific phase.
-- `0.9.2`: current local preview integrating evidence-gated structured indexes and exact-identity navigation for the eight retained high-frequency sites, with host-scoped GLM/Z.ai handling and no extraction scrolling.
-- `0.9.1`: Doubao passive native indexing, stable conversation/message identities, deterministic virtual-list targeting, and exact-ID remount verification.
+- `0.8.2`: add the ChatGPT native navigation preview, floating conversation navigator, and local Prompt Workbench.
+- `0.8.3`: migrate built-in sites to identity-first, non-scrolling refresh and exact mounted-target navigation.
+- `0.8.4`: add evidence-tracked capability records, per-site QA reports, Refresh Index, and permission-gated selector-only custom sites.
 - `0.9.0`: Gemini passive native indexing, stable request/response identities, deterministic mounted-turn binding, and evidence-gated navigation.
+- `0.9.1`: Doubao passive native indexing, stable conversation/message identities, deterministic virtual-list targeting, and exact-ID remount verification.
+- `0.9.2`: current local preview integrating evidence-gated structured indexes and exact-identity navigation for the eight retained high-frequency sites, with host-scoped GLM/Z.ai handling and no extraction scrolling.
 - `0.9.x`: continue public-beta hardening toward 100+ node performance, overflow-safe large-map export, and cancellable AI batch jobs.
 - `0.10.0`: prepare store publication, with Edge Add-ons first and Chrome Web Store following Chrome compatibility.
 - `1.0.0`: stable release after privacy, permissions, docs, QA, and install/recovery paths are complete.
